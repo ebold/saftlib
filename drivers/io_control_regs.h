@@ -1,4 +1,4 @@
-/** Copyright (C) 2011-2016 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+/** Copyright (C) 2011-2016 GSI Helmholtz Centre for Heavy Ion Research GmbH
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -12,7 +12,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public
  *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************
@@ -107,13 +107,6 @@
 #define IO_OPERATION_RESET           1
 #define IO_OPERATION_GET             2
 
-#define IO_TYPE_OE                   0
-#define IO_TYPE_TERM                 1
-#define IO_TYPE_SPEC_IN              2
-#define IO_TYPE_SPEC_OUT             3
-#define IO_TYPE_MUX                  4
-#define IO_TYPE_SEL                  5
-
 #define __IO_RETURN_FAILURE          1
 #define __IO_RETURN_SUCCESS          0
 #define __IO_RETURN_IO_NAME_UNKNOWN  0xffffffff
@@ -127,7 +120,7 @@ typedef enum
   eLVDS_Oe_Legacy_low        = 0x0004,
   eGPIO_Oe_Legacy_high       = 0x0008,
   eLVDS_Oe_Legacy_high       = 0x000c,
-  eIO_Config                 = 0x0010, 
+  eIO_Config                 = 0x0010,
   eIO_Version                = 0x0100,
   eGPIO_Info                 = 0x0104,
   eLVDS_Info                 = 0x0108,
