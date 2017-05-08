@@ -1,4 +1,4 @@
-/** Copyright (C) 2011-2016 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+/** Copyright (C) 2011-2016 GSI Helmholtz Centre for Heavy Ion Research GmbH
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -12,7 +12,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public
  *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************
@@ -33,13 +33,15 @@ Glib::RefPtr<Output> Output::create(const ConstructorType& args)
   return RegisteredObject<Output>::create(args.objectPath, args);
 }
 
-Output::Output(const ConstructorType& args) : 
+Output::Output(const ConstructorType& args) :
   ActionSink(args.objectPath, args.dev, args.name, args.channel, args.num, args.destroy),
   impl(args.impl), partnerPath(args.partnerPath)
 {
   impl->OutputEnable.connect(OutputEnable.make_slot());
   impl->SpecialPurposeOut.connect(SpecialPurposeOut.make_slot());
   impl->BuTiSMultiplexer.connect(BuTiSMultiplexer.make_slot());
+  impl->PPSMultiplexer.connect(BuTiSMultiplexer.make_slot());
+  impl->ExoticMultiplexer.connect(BuTiSMultiplexer.make_slot());
 }
 
 const char *Output::getInterfaceName() const
@@ -82,6 +84,11 @@ bool Output::getBuTiSMultiplexer() const
 bool Output::getPPSMultiplexer() const
 {
   return impl->getPPSMultiplexer();
+}
+
+bool Output::getExoticMultiplexer() const
+{
+  return impl->getExoticMultiplexer();
 }
 
 bool Output::getOutputEnableAvailable() const
@@ -143,6 +150,12 @@ void Output::setPPSMultiplexer(bool val)
 {
   ownerOnly();
   return impl->setPPSMultiplexer(val);
+}
+
+void Output::setExoticMultiplexer(bool val)
+{
+  ownerOnly();
+  return impl->setExoticMultiplexer(val);
 }
 
 }

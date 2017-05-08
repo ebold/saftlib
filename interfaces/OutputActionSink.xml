@@ -50,7 +50,11 @@
   <!-- PPSMultiplexer: Output PPS signal from White Rabbit core.
     -->
   <property name="PPSMultiplexer" type="b" access="readwrite"/>
-    
+  
+  <!-- ExoticMultiplexer: Output exotic signal generation (event driven clock, rate generator, ...).
+    -->
+  <property name="ExoticMultiplexer" type="b" access="readwrite"/>
+  
   <!-- WriteOutput: Directly manipulate the output value.
        Set the output to on/off. Overwrite the previous state,
        regardless of whether it came from WriteOutput or a matching

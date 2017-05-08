@@ -1,4 +1,4 @@
-/** Copyright (C) 2011-2016 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+/** Copyright (C) 2011-2016 GSI Helmholtz Centre for Heavy Ion Research GmbH
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -12,7 +12,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public
  *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************
@@ -41,10 +41,10 @@ class InoutImpl : public Glib::Object
       eb_address_t io_control_addr;
       eb_address_t io_ser_clk_gen_addr;
     };
-    
+
     InoutImpl(const ConstructorType& args);
     static int probe(TimingReceiver* tr, TimingReceiver::ActionSinks& actionSinks, TimingReceiver::EventSources& eventSources);
-    
+
     // iOutputActionSink
     void WriteOutput(bool value);
     bool ReadOutput();
@@ -58,13 +58,16 @@ class InoutImpl : public Glib::Object
     void setBuTiSMultiplexer(bool val);
     bool getPPSMultiplexer() const;
     void setPPSMultiplexer(bool val);
+    bool getExoticMultiplexer() const;
+    void setExoticMultiplexer(bool val);
+
     bool StartClock(double high_phase, double low_phase, guint64 phase_offset);
     bool StopClock();
     Glib::ustring getLogicLevelOut() const;
     Glib::ustring getTypeOut() const;
-    
+
     // iInputEventSource
-    bool ReadInput(); // done
+    bool ReadInput();
     bool getInputTermination() const;
     void setInputTermination(bool val);
     bool getInputTerminationAvailable() const;
@@ -73,17 +76,18 @@ class InoutImpl : public Glib::Object
     bool getSpecialPurposeInAvailable() const;
     Glib::ustring getLogicLevelIn() const;
     Glib::ustring getTypeIn() const;
-    
+
     // iInputEventSource
     guint64 getResolution() const;
-    
+
     sigc::signal< void, bool > OutputEnable;
     sigc::signal< void, bool > SpecialPurposeOut;
     sigc::signal< void, bool > BuTiSMultiplexer;
-    sigc::signal< void, bool > PPSMultiplexer;    
+    sigc::signal< void, bool > PPSMultiplexer;
     sigc::signal< void, bool > InputTermination;
     sigc::signal< void, bool > SpecialPurposeIn;
-    
+    sigc::signal< void, bool > ExoticMultiplexer;
+
   protected:
     TimingReceiver* tr;
     unsigned io_channel;
