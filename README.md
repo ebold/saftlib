@@ -1,13 +1,20 @@
+Saftlib - Simplified API for Timing
+===================================
+
+## Build Status
+------
 [![Build Status](https://travis-ci.org/GSI-CS-CO/saftlib.svg?branch=master)](https://travis-ci.org/GSI-CS-CO/saftlib)
 
-Saftlib - Simplified API for Timing
-
+## What is Saftlib?
+-------------------
 GSI timing receivers include a large collection of slave devices. Saftlib
 provides a user-friendly software interface for controlling these slaves.
 The process saftd shares access to these hardware resources on behalf of
 multiple client programs. Clients connect to saftd via dbus using the
 saftlib library.
 
+## Getting Started
+----------------------
 A simple example:
 
   // Get a list of all devices managed by saftlib
