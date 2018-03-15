@@ -276,6 +276,7 @@
       <xsl:call-template name="caps-name"><xsl:with-param name="name" select="$iface"/></xsl:call-template>
       <xsl:text>_IFACE_H&#10;&#10;</xsl:text>
 
+      <xsl:text>#include &lt;vector&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm/dbusproxy.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm/dbuserror.h&gt;&#10;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm.h&gt;&#10;&#10;</xsl:text>
@@ -419,12 +420,15 @@
 
       <xsl:text>    // notification if async DBus call is completed&#10;</xsl:text>
 
+    gint fast_signal_pipe_fd[2];
+
       <!-- Implementation -->
   protected:
     void on_properties_changed(const MapChangedProperties&amp; changed_properties, const std::vector&lt; Glib::ustring &gt;&amp; invalidated_properties);
     void on_signal(const Glib::ustring&amp; sender_name, const Glib::ustring&amp; signal_name, const Glib::VariantContainerBase&amp; parameters);
     void fetch_property(const char* name, Glib::VariantBase&amp; val) const;
     void update_property(const char* name, const Glib::VariantBase&amp; val);
+
 
     i<xsl:value-of select="$iface"/>_Proxy(
       Gio::DBus::BusType bus_type,
@@ -450,6 +454,8 @@ class i<xsl:value-of select="$iface"/>_Service {
     // non-copyable
     i<xsl:value-of select="$iface"/>_Service(const i<xsl:value-of select="$iface"/>_Service&amp;);
     i<xsl:value-of select="$iface"/>_Service&amp; operator=(const i<xsl:value-of select="$iface"/>_Service&amp;);
+    std::vector&lt;gint&gt; fast_signal_pipes_fd0;
+    std::vector&lt;gint&gt; fast_signal_pipes_fd1;
   private:
     i<xsl:value-of select="$iface"/> *impl;
     sigc::slot&lt;void, const char*&gt; rethrow;<xsl:text/>
