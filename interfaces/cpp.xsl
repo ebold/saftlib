@@ -289,7 +289,8 @@
       <xsl:text>"  &lt;/interface&gt;"&#10;</xsl:text>
       <xsl:text>"&lt;/node&gt;";&#10;&#10;</xsl:text>
 
-      <!-- enums for the fast signal types -->
+      <!-- enum  for the fast signal types -->
+      <xsl:text>// types for handling of fast signals&#10;</xsl:text>
       <xsl:text>enum </xsl:text>
       <xsl:text>i</xsl:text>
       <xsl:value-of select="$iface"/>
@@ -300,6 +301,58 @@
         <xsl:value-of select="@name"/>
       </xsl:for-each>
       <xsl:text>&#10;};&#10;&#10;</xsl:text>
+      <!-- struct for the fast signal types -->
+      <xsl:for-each select="signal">
+        <xsl:text>struct </xsl:text>
+        <xsl:text>i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignal_</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>&#10;{&#10;</xsl:text> 
+        <xsl:for-each select="arg">
+          <xsl:text>  </xsl:text>
+          <!-- special handling for strings -->
+          <xsl:if test="@type='s'">char </xsl:if> 
+          <xsl:if test="@type!='s'">
+            <xsl:call-template name="raw-type"/>
+          </xsl:if>
+          <xsl:text> </xsl:text>
+          <xsl:value-of select="@name"/>
+          <xsl:if test="@type='s'">[8]</xsl:if> 
+          <xsl:text>;&#10;</xsl:text>
+        </xsl:for-each>
+        <xsl:text>};&#10;</xsl:text>
+      </xsl:for-each>
+      <!-- union for the fast signal -->
+      <xsl:text>union </xsl:text>
+      <xsl:text>i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignalData</xsl:text>
+      <xsl:text>&#10;{&#10;</xsl:text> 
+      <xsl:for-each select="signal">
+        <xsl:text>  i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignal_</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>    </xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>;&#10;</xsl:text>
+      </xsl:for-each>
+      <xsl:text>};&#10;</xsl:text>
+
+      <!-- struct for the fast signal -->
+      <xsl:text>struct </xsl:text>
+      <xsl:text>i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignal</xsl:text>
+      <xsl:text>&#10;{&#10;</xsl:text> 
+      <xsl:text>  i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignalTypes type;&#10;</xsl:text> 
+      <xsl:text>  i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignalData data;&#10;</xsl:text>
+      <xsl:text>};&#10;&#10;</xsl:text>
 
 
       <!-- Interface vtable -->
@@ -730,9 +783,36 @@
       <xsl:text>bool i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text>_Proxy::dispatchFastSignals(Glib::IOCondition condition)&#10;{&#10;</xsl:text>
-      <xsl:text>  char type_of_signal;&#10;</xsl:text>
-      <xsl:text>  read(fast_signal_pipe_fd[0], &amp;type_of_signal, sizeof(type_of_signal));&#10;</xsl:text>
-      <xsl:text>  std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)type_of_signal &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>  i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
+      <xsl:text>  read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+      <xsl:text>  std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>  switch(signal_msg.type) {&#10;</xsl:text>
+      <xsl:for-each select="signal">
+        <xsl:text>    case fastsig_</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>: {&#10;</xsl:text>
+        <xsl:text>      i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignal_</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text> signal_data = signal_msg.data.</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>;&#10;</xsl:text>
+<!--         some debug output -->
+        <xsl:text>      std::cerr &lt;&lt; "signal </xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text> recieved: "</xsl:text>
+        <xsl:for-each select="arg">
+          <xsl:text> &lt;&lt; " " &lt;&lt; signal_data.</xsl:text>
+          <xsl:value-of select="@name"/>
+        </xsl:for-each>
+        <xsl:text> &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>    } break;&#10;</xsl:text>
+      </xsl:for-each>
+      <xsl:text>  }&#10;</xsl:text>
+
       <xsl:text>}&#10;&#10;</xsl:text>
 
 
@@ -744,11 +824,15 @@
       <xsl:text>_Proxy()&#10;</xsl:text>
       <xsl:text>{&#10;</xsl:text>
       <xsl:text>  fastsig_connection.disconnect();&#10;</xsl:text>
-      <xsl:text>  char end_message = 0x0;&#10;</xsl:text>
-      <xsl:text>  write(fast_signal_pipe_fd[1], &amp;end_message, sizeof(end_message));&#10;</xsl:text>
+      <xsl:text>  i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
+      <xsl:text>  signal_msg.type = fastsig_null; // closing signal&#10;</xsl:text>
+<!--       <xsl:text>  char end_message = 0x0;&#10;</xsl:text> -->
+      <xsl:text>  write(fast_signal_pipe_fd[1], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
       <xsl:text>  close(fast_signal_pipe_fd[0]);&#10;</xsl:text>
       <xsl:text>  close(fast_signal_pipe_fd[1]);&#10;</xsl:text>
-     <xsl:text>  std::cerr &lt;&lt; "end of destructor of </xsl:text>
+      <xsl:text>  std::cerr &lt;&lt; "end of destructor of </xsl:text>
       <xsl:value-of select="@name"/> 
       <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>}&#10;&#10;</xsl:text>
@@ -1146,11 +1230,38 @@
         <xsl:text>      Glib::VariantContainerBase::create_tuple(data_vector));&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text>
         <xsl:text>  // send a fast signals&#10;</xsl:text>
-        <xsl:text>  char signal = fastsig_</xsl:text>
+        <xsl:text>  i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignal_</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text> signal_data;&#10;</xsl:text>
+        <xsl:for-each select="arg">
+          <xsl:if test="@type='s'">
+            <xsl:text>  </xsl:text>
+            <xsl:value-of select="@name"/>
+            <xsl:text>.copy(signal_data.</xsl:text>
+            <xsl:value-of select="@name"/>
+            <xsl:text>, 8)</xsl:text>
+          </xsl:if>
+          <xsl:if test="@type!='s'">
+            <xsl:text>  signal_data.</xsl:text>
+            <xsl:value-of select="@name"/>
+            <xsl:text> = </xsl:text>
+            <xsl:value-of select="@name"/>
+          </xsl:if>        
+          <xsl:text>;&#10;</xsl:text>
+        </xsl:for-each>
+        <xsl:text>  i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
+        <xsl:text>  signal_msg.type = fastsig_</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text>;&#10;</xsl:text>
+        <xsl:text>  signal_msg.data.</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text> = signal_data;&#10;</xsl:text>
         <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;  {&#10;  </xsl:text>
-        <xsl:text>  write(fast_signal_pipes_fd1[i], &amp;signal, sizeof(signal));&#10;</xsl:text>
+        <xsl:text>  write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
         <xsl:text>  }&#10;}&#10;&#10;</xsl:text>
       </xsl:for-each>
 
