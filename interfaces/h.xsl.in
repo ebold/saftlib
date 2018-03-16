@@ -364,6 +364,10 @@
       const Glib::ustring&amp; name,
       Gio::DBus::BusType bus_type, 
       Gio::DBus::ProxyFlags flags);&#10;&#10;<xsl:text/>
+
+      <!-- destructor closes the pipe that is used for fast signal reception -->
+      <xsl:text>     ~i</xsl:text>
+      <xsl:value-of select="$iface"/>_Proxy();&#10;&#10;<xsl:text/>
       
       <!-- Concrete implementations -->
       <xsl:text>    // Implement abstract base class methods&#10;</xsl:text>
@@ -404,6 +408,9 @@
       </xsl:for-each>
 
       <xsl:if test="$proxy_abc">    */&#10;</xsl:if>
+
+
+
 
       <!-- Forbid copy -->
       <xsl:text>&#10;  private:&#10;</xsl:text>
