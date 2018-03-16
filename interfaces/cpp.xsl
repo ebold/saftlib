@@ -289,6 +289,19 @@
       <xsl:text>"  &lt;/interface&gt;"&#10;</xsl:text>
       <xsl:text>"&lt;/node&gt;";&#10;&#10;</xsl:text>
 
+      <!-- enums for the fast signal types -->
+      <xsl:text>enum </xsl:text>
+      <xsl:text>i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_FastSignalTypes&#10;{&#10;</xsl:text> 
+      <xsl:text>  fastsig_null = 0</xsl:text>
+      <xsl:for-each select="signal">
+        <xsl:text>,&#10;  fastsig_</xsl:text>
+        <xsl:value-of select="@name"/>
+      </xsl:for-each>
+      <xsl:text>&#10;};&#10;&#10;</xsl:text>
+
+
       <!-- Interface vtable -->
       <xsl:text>i</xsl:text>
       <xsl:value-of select="$iface"/>
@@ -703,10 +716,22 @@
       <xsl:text>      out_fd_list,&#10;</xsl:text>
       <xsl:text>      "de.gsi.saftlib"&#10;</xsl:text>
       <xsl:text>  );&#10;&#10;</xsl:text>  
+      <xsl:text>  Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
+      <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP);&#10;&#10;<xsl:text/>
      <xsl:text>  std::cerr &lt;&lt; "end of constructor of </xsl:text>
       <xsl:value-of select="@name"/> 
       <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>}&#10;&#10;</xsl:text>
+
+      <!-- dispatcher for fast signals -->
+      <xsl:text>bool i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text>_Proxy::dispatchFastSignals(Glib::IOCondition condition)&#10;{&#10;</xsl:text>
+      <xsl:text>  char type_of_signal;&#10;</xsl:text>
+      <xsl:text>  read(fast_signal_pipe_fd[0], &amp;type_of_signal, sizeof(type_of_signal));&#10;</xsl:text>
+      <xsl:text>  std::cerr &lt;&lt; "signal recieved: " &lt;&lt; type_of_signal &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>}&#10;&#10;</xsl:text>
+
 
       <!-- Destructor -->
       <xsl:text>i</xsl:text>

@@ -368,7 +368,7 @@
       <!-- destructor closes the pipe that is used for fast signal reception -->
       <xsl:text>     ~i</xsl:text>
       <xsl:value-of select="$iface"/>_Proxy();&#10;&#10;<xsl:text/>
-      
+
       <!-- Concrete implementations -->
       <xsl:text>    // Implement abstract base class methods&#10;</xsl:text>
       <xsl:for-each select="method">
@@ -414,6 +414,9 @@
 
       <!-- Forbid copy -->
       <xsl:text>&#10;  private:&#10;</xsl:text>
+      <!-- dispatcher for fast signals -->
+      <xsl:text>    // dispatcher for fast signals&#10;</xsl:text>
+      <xsl:text>     bool dispatchFastSignals(Glib::IOCondition condition);&#10;&#10;</xsl:text>
       <xsl:text>    // noncopyable&#10;</xsl:text>
       <xsl:text>    i</xsl:text>
       <xsl:value-of select="$iface"/>_Proxy(const i<xsl:value-of select="$iface"/>_Proxy&amp;);&#10;<xsl:text/>
