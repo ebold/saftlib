@@ -689,7 +689,7 @@
       <xsl:text>  const Glib::ustring&amp; signal_name,&#10;</xsl:text>
       <xsl:text>  const Glib::VariantContainerBase&amp; parameters)&#10;</xsl:text>
       <xsl:text>{&#10;</xsl:text>
-      <xsl:text>  Gio::DBus::Proxy::on_signal(sender_name, signal_name, parameters);&#10;</xsl:text>
+<!--       <xsl:text>  Gio::DBus::Proxy::on_signal(sender_name, signal_name, parameters);&#10;</xsl:text>
       <xsl:text>  </xsl:text>
       <xsl:for-each select="signal">
         <xsl:text>if (signal_name == "</xsl:text>
@@ -721,7 +721,7 @@
           <xsl:text>.get()</xsl:text>
         </xsl:for-each>
         <xsl:text>);&#10;  } else </xsl:text>
-      </xsl:for-each>
+      </xsl:for-each> -->
       <xsl:text>{&#10;    // noop&#10;  }&#10;}&#10;&#10;</xsl:text>
 
       <!-- Constructor -->
@@ -787,7 +787,7 @@
       <xsl:value-of select="$iface"/>
       <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
       <xsl:text>  read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
-      <xsl:text>  std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>  //std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>  switch(signal_msg.type) {&#10;</xsl:text>
       <xsl:for-each select="signal">
         <xsl:text>    case fastsig_</xsl:text>
@@ -801,7 +801,7 @@
         <xsl:value-of select="@name"/>
         <xsl:text>;&#10;</xsl:text>
 <!--         some debug output -->
-        <xsl:text>      std::cerr &lt;&lt; "signal </xsl:text>
+        <xsl:text>      //std::cerr &lt;&lt; "signal </xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text> recieved: "</xsl:text>
         <xsl:for-each select="arg">
@@ -809,10 +809,23 @@
           <xsl:value-of select="@name"/>
         </xsl:for-each>
         <xsl:text> &lt;&lt; std::endl;&#10;</xsl:text>
+        <!-- trigger the sigc signal -->
+        <xsl:text>      </xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>(</xsl:text>
+        <xsl:for-each select="arg">
+          <xsl:text>signal_data.</xsl:text>
+          <xsl:value-of select="@name"/>
+          <xsl:choose>
+            <xsl:when test="position()=last()"></xsl:when>
+            <xsl:otherwise><xsl:text>, </xsl:text></xsl:otherwise>
+          </xsl:choose> 
+        </xsl:for-each>
+        <xsl:text>);&#10;</xsl:text>
         <xsl:text>    } break;&#10;</xsl:text>
       </xsl:for-each>
       <xsl:text>  }&#10;</xsl:text>
-
+      <xsl:text>  return true;&#10;</xsl:text>
       <xsl:text>}&#10;&#10;</xsl:text>
 
 
@@ -1212,7 +1225,7 @@
          <xsl:with-param name="namespace">i<xsl:value-of select="$iface"/>_Service::on_sig</xsl:with-param>
         </xsl:call-template>
         <xsl:text>&#10;{&#10;</xsl:text>
-        <xsl:text>  std::vector&lt;Glib::VariantBase&gt; data_vector;&#10;</xsl:text>
+<!--         <xsl:text>  std::vector&lt;Glib::VariantBase&gt; data_vector;&#10;</xsl:text>
         <xsl:for-each select="arg">
          <xsl:text>  data_vector.push_back(</xsl:text>
          <xsl:call-template name="variant-type"/>
@@ -1228,7 +1241,7 @@
         <xsl:value-of select="@name"/>
         <xsl:text>", "", &#10;</xsl:text>
         <xsl:text>      Glib::VariantContainerBase::create_tuple(data_vector));&#10;</xsl:text>
-        <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text> -->
         <xsl:text>  // send a fast signals&#10;</xsl:text>
         <xsl:text>  i</xsl:text>
         <xsl:value-of select="$iface"/>
