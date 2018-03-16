@@ -656,6 +656,9 @@
           <xsl:value-of select="position()-1"/>
           <xsl:text>);&#10;</xsl:text>
         </xsl:for-each>
+        <xsl:text>    std::cerr &lt;&lt; "signal </xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text> received " &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>    </xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text>(</xsl:text>
@@ -716,7 +719,7 @@
       <xsl:text>      out_fd_list,&#10;</xsl:text>
       <xsl:text>      "de.gsi.saftlib"&#10;</xsl:text>
       <xsl:text>  );&#10;&#10;</xsl:text>  
-      <xsl:text>  Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
+      <xsl:text>  fastsig_connection = Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
       <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP);&#10;&#10;<xsl:text/>
      <xsl:text>  std::cerr &lt;&lt; "end of constructor of </xsl:text>
       <xsl:value-of select="@name"/> 
@@ -729,7 +732,7 @@
       <xsl:text>_Proxy::dispatchFastSignals(Glib::IOCondition condition)&#10;{&#10;</xsl:text>
       <xsl:text>  char type_of_signal;&#10;</xsl:text>
       <xsl:text>  read(fast_signal_pipe_fd[0], &amp;type_of_signal, sizeof(type_of_signal));&#10;</xsl:text>
-      <xsl:text>  std::cerr &lt;&lt; "signal recieved: " &lt;&lt; type_of_signal &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>  std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)type_of_signal &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>}&#10;&#10;</xsl:text>
 
 
@@ -740,6 +743,7 @@
       <xsl:value-of select="$iface"/>
       <xsl:text>_Proxy()&#10;</xsl:text>
       <xsl:text>{&#10;</xsl:text>
+      <xsl:text>  fastsig_connection.disconnect();&#10;</xsl:text>
       <xsl:text>  char end_message = 0x0;&#10;</xsl:text>
       <xsl:text>  write(fast_signal_pipe_fd[1], &amp;end_message, sizeof(end_message));&#10;</xsl:text>
       <xsl:text>  close(fast_signal_pipe_fd[0]);&#10;</xsl:text>
@@ -1140,6 +1144,13 @@
         <xsl:value-of select="@name"/>
         <xsl:text>", "", &#10;</xsl:text>
         <xsl:text>      Glib::VariantContainerBase::create_tuple(data_vector));&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>  // send a fast signals&#10;</xsl:text>
+        <xsl:text>  char signal = fastsig_</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>;&#10;</xsl:text>
+        <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;  {&#10;  </xsl:text>
+        <xsl:text>  write(fast_signal_pipes_fd1[i], &amp;signal, sizeof(signal));&#10;</xsl:text>
         <xsl:text>  }&#10;}&#10;&#10;</xsl:text>
       </xsl:for-each>
 

@@ -414,6 +414,9 @@
 
       <!-- Forbid copy -->
       <xsl:text>&#10;  private:&#10;</xsl:text>
+      <!-- connection of the fast pipe to the glib main-loop -->
+      <xsl:text>    // connection of main loop to fast_pipe&#10;</xsl:text>
+      <xsl:text>    sigc::connection fastsig_connection;&#10;</xsl:text>
       <!-- dispatcher for fast signals -->
       <xsl:text>    // dispatcher for fast signals&#10;</xsl:text>
       <xsl:text>     bool dispatchFastSignals(Glib::IOCondition condition);&#10;&#10;</xsl:text>
