@@ -212,6 +212,8 @@
 
       <!-- C++ boilerplate -->
       <xsl:text>// This is a generated file. Do not modify.&#10;&#10;</xsl:text>
+      <xsl:text>#include &lt;time.h&gt;&#10;</xsl:text>
+      <xsl:text>#include &lt;fcntl.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;iostream&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;glibmm.h&gt;&#10;</xsl:text>
@@ -249,9 +251,11 @@
           </xsl:for-each>
         <xsl:text>"    &lt;/property&gt;"&#10;</xsl:text>
       </xsl:for-each>
-      <!-- a special method that is used to establish a permanent pipe for fast_signal -->
-      <xsl:text>"    &lt;method name='FastSignalPipeInit'&gt;"&#10;</xsl:text>
-      <xsl:text>"    &lt;/method&gt;"&#10;</xsl:text>
+      <!-- a special method that is used to establish a permanent pipe for fast_signal (only if there are actually signals defined) -->
+      <xsl:if test="not(count(signal)=0)">
+        <xsl:text>"    &lt;method name='FastSignalPipeInit'&gt;"&#10;</xsl:text>
+        <xsl:text>"    &lt;/method&gt;"&#10;</xsl:text>
+      </xsl:if>
       <!-- methods -->
       <xsl:for-each select="method">
         <xsl:text>"    &lt;method name='</xsl:text>
@@ -271,12 +275,13 @@
         <xsl:text>"    &lt;/method&gt;"&#10;</xsl:text>
       </xsl:for-each>
       <!-- signals -->
-      <xsl:for-each select="signal">
+   <!--    <xsl:for-each select="signal">
         <xsl:text>"    &lt;signal name='</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text>'&gt;"&#10;</xsl:text>
-          <xsl:for-each select="arg">
-            <xsl:if test="not(substring(@type,1,1)='A')"> <!-- remove the array-through-pipe arguments from the d-bus interface -->
+          <xsl:for-each select="arg"> -->
+            <!-- remove the array-through-pipe arguments from the d-bus interface -->
+<!--            <xsl:if test="not(substring(@type,1,1)='A')">  
               <xsl:text>"      &lt;arg name='</xsl:text>
               <xsl:value-of select="@name"/>
               <xsl:text>' type='</xsl:text>
@@ -284,10 +289,10 @@
               <xsl:text>'/&gt;"&#10;</xsl:text>
             </xsl:if>
           </xsl:for-each>
-        <xsl:text>"    &lt;/signal&gt;"&#10;</xsl:text>
-      </xsl:for-each>
+        <xsl:text>"    &lt;/signal&gt;"&#10;</xsl:text> 
+      </xsl:for-each>  -->
       <xsl:text>"  &lt;/interface&gt;"&#10;</xsl:text>
-      <xsl:text>"&lt;/node&gt;";&#10;&#10;</xsl:text>
+      <xsl:text>"&lt;/node&gt;";&#10;&#10;</xsl:text> 
 
       <!-- enum  for the fast signal types -->
       <xsl:text>// types for handling of fast signals&#10;</xsl:text>
@@ -352,6 +357,8 @@
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text>_FastSignalData data;&#10;</xsl:text>
+      <xsl:text>  struct timespec start_time;&#10;</xsl:text>
+      <xsl:text>  int fd_list_length;&#10;</xsl:text>
       <xsl:text>};&#10;&#10;</xsl:text>
 
 
@@ -737,46 +744,48 @@
       <xsl:text>  Gio::DBus::ProxyFlags flags)&#10;</xsl:text>
       <xsl:text>: Proxy(bus_type, name, object_path, interface_name, Glib::RefPtr&lt;Gio::DBus::InterfaceInfo&gt;(), flags)&#10;</xsl:text>
       <xsl:text>{&#10;</xsl:text>
-      <!-- create a dbus function call to send a pipe to the service.
+      <xsl:if test="not(count(signal)=0)">           
+        <!-- create a dbus function call to send a pipe to the service.
            this pipe will be used for transmission of fast signals -->
-      <xsl:text>  std::cerr &lt;&lt; "constructor of </xsl:text>
-      <xsl:value-of select="@name"/> 
-      <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  std::cerr &lt;&lt; "constructor of </xsl:text>
+        <xsl:value-of select="@name"/> 
+        <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
 
-      <xsl:text>  Glib::RefPtr&lt;Gio::DBus::Connection&gt; connection = get_connection();&#10;</xsl:text>
-      <xsl:text>  connection-&gt;reference();&#10;</xsl:text>
-      <xsl:text>  Glib::RefPtr&lt;Gio::Cancellable&gt; cancellable;&#10;</xsl:text>
-      <xsl:text>  Glib::RefPtr&lt;Gio::UnixFDList&gt; fd_list = Gio::UnixFDList::create();&#10;</xsl:text>
-      <xsl:text>  Glib::RefPtr&lt;Gio::UnixFDList&gt; out_fd_list = Gio::UnixFDList::create();&#10;</xsl:text>
-      <xsl:text>  if (pipe(fast_signal_pipe_fd) != 0) {&#10;</xsl:text>
-      <xsl:text>    throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "cannot open pipe");&#10;</xsl:text>
-      <xsl:text>  }&#10;</xsl:text>
-      <xsl:text>  fd_list-&gt;append(fast_signal_pipe_fd[0]);&#10;</xsl:text>
-      <xsl:text>  fd_list-&gt;append(fast_signal_pipe_fd[1]);&#10;</xsl:text>
-      <xsl:text>  std::vector&lt;Glib::VariantBase&gt; query_vector;&#10;</xsl:text>
-      <xsl:text>  const Glib::VariantContainerBase&amp; query = Glib::VariantContainerBase::create_tuple(query_vector);&#10;&#10;</xsl:text>
-      <xsl:text>  Glib::VariantContainerBase response;&#10;</xsl:text>
-      <!-- make dbus function call -->
-      <xsl:text>  std::cerr &lt;&lt; "dbus function call in constructor of </xsl:text>
-      <xsl:value-of select="@name"/> 
-      <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
-      <xsl:text>  response = connection-&gt;call_sync(&#10;</xsl:text>
-      <xsl:text>      get_object_path(), &#10;</xsl:text>
-      <xsl:text>      "de.gsi.saftlib.</xsl:text>
-      <xsl:value-of select="$iface"/>
-      <xsl:text>",&#10;</xsl:text> 
-      <xsl:text>      "FastSignalPipeInit",&#10;</xsl:text>
-      <xsl:text>      query,&#10;</xsl:text>
-      <xsl:text>      cancellable,&#10;</xsl:text>
-      <xsl:text>      fd_list,&#10;</xsl:text>
-      <xsl:text>      out_fd_list,&#10;</xsl:text>
-      <xsl:text>      "de.gsi.saftlib"&#10;</xsl:text>
-      <xsl:text>  );&#10;&#10;</xsl:text>  
-      <xsl:text>  fastsig_connection = Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
-      <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP);&#10;&#10;<xsl:text/>
-     <xsl:text>  std::cerr &lt;&lt; "end of constructor of </xsl:text>
-      <xsl:value-of select="@name"/> 
-      <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  Glib::RefPtr&lt;Gio::DBus::Connection&gt; connection = get_connection();&#10;</xsl:text>
+        <xsl:text>  connection-&gt;reference();&#10;</xsl:text>
+        <xsl:text>  Glib::RefPtr&lt;Gio::Cancellable&gt; cancellable;&#10;</xsl:text>
+        <xsl:text>  Glib::RefPtr&lt;Gio::UnixFDList&gt; fd_list = Gio::UnixFDList::create();&#10;</xsl:text>
+        <xsl:text>  Glib::RefPtr&lt;Gio::UnixFDList&gt; out_fd_list = Gio::UnixFDList::create();&#10;</xsl:text>
+        <xsl:text>  if (pipe(fast_signal_pipe_fd) != 0) {&#10;</xsl:text>
+        <xsl:text>    throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "cannot open pipe");&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>  fd_list-&gt;append(fast_signal_pipe_fd[0]);&#10;</xsl:text>
+        <xsl:text>  fd_list-&gt;append(fast_signal_pipe_fd[1]);&#10;</xsl:text>
+        <xsl:text>  std::vector&lt;Glib::VariantBase&gt; query_vector;&#10;</xsl:text>
+        <xsl:text>  const Glib::VariantContainerBase&amp; query = Glib::VariantContainerBase::create_tuple(query_vector);&#10;&#10;</xsl:text>
+        <xsl:text>  Glib::VariantContainerBase response;&#10;</xsl:text>
+        <!-- make dbus function call -->
+        <xsl:text>  std::cerr &lt;&lt; "dbus function call in constructor of </xsl:text>
+        <xsl:value-of select="@name"/> 
+        <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  response = connection-&gt;call_sync(&#10;</xsl:text>
+        <xsl:text>      get_object_path(), &#10;</xsl:text>
+        <xsl:text>      "de.gsi.saftlib.</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>",&#10;</xsl:text> 
+        <xsl:text>      "FastSignalPipeInit",&#10;</xsl:text>
+        <xsl:text>      query,&#10;</xsl:text>
+        <xsl:text>      cancellable,&#10;</xsl:text>
+        <xsl:text>      fd_list,&#10;</xsl:text>
+        <xsl:text>      out_fd_list,&#10;</xsl:text>
+        <xsl:text>      "de.gsi.saftlib"&#10;</xsl:text>
+        <xsl:text>  );&#10;&#10;</xsl:text>  
+        <xsl:text>  fastsig_connection = Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
+        <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP);&#10;&#10;<xsl:text/>
+        <xsl:text>  std::cerr &lt;&lt; "end of constructor of </xsl:text>
+        <xsl:value-of select="@name"/> 
+        <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
+      </xsl:if>
       <xsl:text>}&#10;&#10;</xsl:text>
 
       <!-- dispatcher for fast signals -->
@@ -787,7 +796,13 @@
       <xsl:value-of select="$iface"/>
       <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
       <xsl:text>  read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
-      <xsl:text>  //std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>  struct timespec stop_time;&#10;</xsl:text>
+      <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;stop_time);&#10;</xsl:text> 
+      <xsl:text>  double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
+      <xsl:text>  //std::cerr &lt;&lt; "</xsl:text>
+      <xsl:text>  i</xsl:text>
+      <xsl:value-of select="$iface"/>
+      <xsl:text> signal recieved, dt=" &lt;&lt; dt &lt;&lt; " us    " &lt;&lt; signal_msg.fd_list_length &lt;&lt; "  :  " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>  switch(signal_msg.type) {&#10;</xsl:text>
       <xsl:for-each select="signal">
         <xsl:text>    case fastsig_</xsl:text>
@@ -830,26 +845,27 @@
 
 
       <!-- Destructor -->
-      <xsl:text>i</xsl:text>
-      <xsl:value-of select="$iface"/>
-      <xsl:text>_Proxy::~i</xsl:text>
-      <xsl:value-of select="$iface"/>
-      <xsl:text>_Proxy()&#10;</xsl:text>
-      <xsl:text>{&#10;</xsl:text>
-      <xsl:text>  fastsig_connection.disconnect();&#10;</xsl:text>
-      <xsl:text>  i</xsl:text>
-      <xsl:value-of select="$iface"/>
-      <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
-      <xsl:text>  signal_msg.type = fastsig_null; // closing signal&#10;</xsl:text>
-<!--       <xsl:text>  char end_message = 0x0;&#10;</xsl:text> -->
-      <xsl:text>  write(fast_signal_pipe_fd[1], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
-      <xsl:text>  close(fast_signal_pipe_fd[0]);&#10;</xsl:text>
-      <xsl:text>  close(fast_signal_pipe_fd[1]);&#10;</xsl:text>
-      <xsl:text>  std::cerr &lt;&lt; "end of destructor of </xsl:text>
-      <xsl:value-of select="@name"/> 
-      <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
-      <xsl:text>}&#10;&#10;</xsl:text>
-
+      <xsl:if test="not(count(signal)=0)">           
+        <xsl:text>i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_Proxy::~i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_Proxy()&#10;</xsl:text>
+        <xsl:text>{&#10;</xsl:text>
+        <xsl:text>  fastsig_connection.disconnect();&#10;</xsl:text>
+        <xsl:text>  i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
+        <xsl:text>  signal_msg.type = fastsig_null; // closing signal&#10;</xsl:text>
+        <xsl:text>  std::cerr &lt;&lt; "Destructor called, writing fastsig_null" &lt;&lt; std::endl;</xsl:text>
+        <xsl:text>  write(fast_signal_pipe_fd[1], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+        <xsl:text>  close(fast_signal_pipe_fd[0]);&#10;</xsl:text>
+        <xsl:text>  close(fast_signal_pipe_fd[1]);&#10;</xsl:text>
+        <xsl:text>  std::cerr &lt;&lt; "end of destructor of </xsl:text>
+        <xsl:value-of select="@name"/> 
+        <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>}&#10;&#10;</xsl:text>
+      </xsl:if>
 
       <!-- Create -->
       <xsl:text>Glib::RefPtr&lt;i</xsl:text>
@@ -937,69 +953,45 @@
       <xsl:text>  connection = connection_;&#10;</xsl:text>
       <xsl:text>  </xsl:text>
 
-      <!-- a special service method do receive the pipe for fast_signal transfer -->
-      <xsl:text>if (method_name == "FastSignalPipeInit") {&#10;</xsl:text>
-      <xsl:text>    try {&#10;</xsl:text>
-      <!-- take a fildescriptor pair from fd_list in case there is any type 'A' present -->
-      <xsl:text>      Glib::RefPtr&lt;Gio::DBus::Message&gt; message = invocation-&gt;get_message();&#10;</xsl:text>
-      <xsl:text>      GUnixFDList *fd_list  = g_dbus_message_get_unix_fd_list(message-&gt;gobj());&#10;</xsl:text>
-      <xsl:text>      if (!fd_list) { &#10;</xsl:text>
-      <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "No filedescriptors received");&#10;</xsl:text>
-      <xsl:text>      }&#10;</xsl:text>
-      <xsl:text>      if (g_unix_fd_list_get_length(fd_list) != 2) { &#10;</xsl:text>
-      <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "Wrong number of file descriptors received");&#10;</xsl:text>
-      <xsl:text>      }&#10;</xsl:text>
-      <xsl:text>      int fd_index = 0;&#10;</xsl:text>
-      <xsl:text>      int fd0 = g_unix_fd_list_get(fd_list, fd_index++, 0);&#10;</xsl:text>
-      <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0);&#10;</xsl:text>
-      <xsl:text>      fast_signal_pipes_fd0.push_back(fd0);&#10;</xsl:text>
-      <xsl:text>      fast_signal_pipes_fd1.push_back(fd1);&#10;</xsl:text>
-      <xsl:text>    } catch (...) {&#10;</xsl:text>
-      <xsl:text>        connection.reset();&#10;</xsl:text>
-      <xsl:if test="not(count(arg[substring(@type,1,1)='A'])=0)">
-        <xsl:text>        close(_vector_pipe_fd0);&#10;</xsl:text>
-        <xsl:text>        close(_vector_pipe_fd1);&#10;</xsl:text>
+      <!-- a special service method to receive the pipe for fast_signal transfer -->
+      <xsl:if test="not(count(signal)=0)">           
+        <xsl:text>if (method_name == "FastSignalPipeInit") {&#10;</xsl:text>
+        <xsl:text>    try {&#10;</xsl:text>
+        <!-- take a fildescriptor pair from fd_list in case there is any type 'A' present -->
+        <xsl:text>      Glib::RefPtr&lt;Gio::DBus::Message&gt; message = invocation-&gt;get_message();&#10;</xsl:text>
+        <xsl:text>      GUnixFDList *fd_list  = g_dbus_message_get_unix_fd_list(message-&gt;gobj());&#10;</xsl:text>
+        <xsl:text>      if (!fd_list) { &#10;</xsl:text>
+        <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "No filedescriptors received");&#10;</xsl:text>
+        <xsl:text>      }&#10;</xsl:text>
+        <xsl:text>      if (g_unix_fd_list_get_length(fd_list) != 2) { &#10;</xsl:text>
+        <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "Wrong number of file descriptors received");&#10;</xsl:text>
+        <xsl:text>      }&#10;</xsl:text>
+        <xsl:text>      int fd_index = 0;&#10;</xsl:text>
+        <xsl:text>      int fd0 = g_unix_fd_list_get(fd_list, fd_index++, 0); // reading end&#10;</xsl:text>
+        <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0); // writing end&#10;</xsl:text> 
+        <xsl:text>      //make the file descriptors non-blocking;&#10;</xsl:text>
+        <xsl:text>      int fd0_flags = fcntl(fd0, F_GETFL, 0);&#10;</xsl:text>
+        <xsl:text>      fcntl(fd0, F_SETFL, fd0_flags | O_NONBLOCK);&#10;</xsl:text>
+        <xsl:text>      fast_signal_pipes_fd0.push_back(fd0);&#10;</xsl:text>
+        <xsl:text>      fast_signal_pipes_fd1.push_back(fd1);&#10;</xsl:text>
+        <xsl:text>    } catch (...) {&#10;</xsl:text>
+        <xsl:text>        connection.reset();&#10;</xsl:text>
+        <xsl:if test="not(count(arg[substring(@type,1,1)='A'])=0)">
+          <xsl:text>        close(_vector_pipe_fd0);&#10;</xsl:text>
+          <xsl:text>        close(_vector_pipe_fd1);&#10;</xsl:text>
+        </xsl:if>
+        <xsl:text>        rethrow("</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>");&#10;</xsl:text>
+        <xsl:text>        throw;&#10;</xsl:text>
+        <xsl:text>    }&#10;</xsl:text>
+        <xsl:text>    std::vector&lt;Glib::VariantBase&gt; response_vector;&#10;</xsl:text>
+        <xsl:text>    invocation->return_value(Glib::VariantContainerBase::create_tuple(response_vector));&#10;</xsl:text>
+        <xsl:text>    connection.reset();&#10;</xsl:text>
+        <xsl:text>  } else </xsl:text>
       </xsl:if>
-      <xsl:text>        rethrow("</xsl:text>
-      <xsl:value-of select="@name"/>
-      <xsl:text>");&#10;</xsl:text>
-      <xsl:text>        throw;&#10;</xsl:text>
-      <xsl:text>    }&#10;</xsl:text>
-      <xsl:text>    std::vector&lt;Glib::VariantBase&gt; response_vector;&#10;</xsl:text>
-      <xsl:text>    invocation->return_value(Glib::VariantContainerBase::create_tuple(response_vector));&#10;</xsl:text>
-      <xsl:text>    connection.reset();&#10;</xsl:text>
-      <xsl:text>  } else </xsl:text>
 
-      <!-- a special service method do destroy the pipe for fast_signal transfer -->
-      <xsl:text>if (method_name == "FastSignalPipeDestroy") {&#10;</xsl:text>
-      <xsl:text>    try {&#10;</xsl:text>
-      <!-- take a fildescriptor pair from fd_list in case there is any type 'A' present -->
-      <xsl:text>      Glib::RefPtr&lt;Gio::DBus::Message&gt; message = invocation-&gt;get_message();&#10;</xsl:text>
-      <xsl:text>      GUnixFDList *fd_list  = g_dbus_message_get_unix_fd_list(message-&gt;gobj());&#10;</xsl:text>
-      <xsl:text>      if (!fd_list) { &#10;</xsl:text>
-      <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "No filedescriptors received");&#10;</xsl:text>
-      <xsl:text>      }&#10;</xsl:text>
-      <xsl:text>      if (g_unix_fd_list_get_length(fd_list) != 2) { &#10;</xsl:text>
-      <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "Wrong number of file descriptors received");&#10;</xsl:text>
-      <xsl:text>      }&#10;</xsl:text>
-      <xsl:text>      int fd_index = 0;&#10;</xsl:text>
-      <xsl:text>      int fd0 = g_unix_fd_list_get(fd_list, fd_index++, 0);&#10;</xsl:text>
-      <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0);&#10;</xsl:text>
-      <xsl:text>    } catch (...) {&#10;</xsl:text>
-      <xsl:text>        connection.reset();&#10;</xsl:text>
-      <xsl:if test="not(count(arg[substring(@type,1,1)='A'])=0)">
-        <xsl:text>        close(_vector_pipe_fd0);&#10;</xsl:text>
-        <xsl:text>        close(_vector_pipe_fd1);&#10;</xsl:text>
-      </xsl:if>
-      <xsl:text>        rethrow("</xsl:text>
-      <xsl:value-of select="@name"/>
-      <xsl:text>");&#10;</xsl:text>
-      <xsl:text>        throw;&#10;</xsl:text>
-      <xsl:text>    }&#10;</xsl:text>
-      <xsl:text>    std::vector&lt;Glib::VariantBase&gt; response_vector;&#10;</xsl:text>
-      <xsl:text>    invocation->return_value(Glib::VariantContainerBase::create_tuple(response_vector));&#10;</xsl:text>
-      <xsl:text>    connection.reset();&#10;</xsl:text>
-      <xsl:text>  } else </xsl:text>
+
 
 
       <!-- all other methods -->
@@ -1267,15 +1259,49 @@
         <xsl:text>  i</xsl:text>
         <xsl:value-of select="$iface"/>
         <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
+        <xsl:text>  signal_msg.fd_list_length = fast_signal_pipes_fd1.size();&#10;</xsl:text>
+        <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;signal_msg.start_time);&#10;</xsl:text>
         <xsl:text>  signal_msg.type = fastsig_</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text>;&#10;</xsl:text>
         <xsl:text>  signal_msg.data.</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text> = signal_data;&#10;</xsl:text>
-        <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;  {&#10;  </xsl:text>
-        <xsl:text>  write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
-        <xsl:text>  }&#10;}&#10;&#10;</xsl:text>
+        <xsl:text>  bool need_cleanup = false;&#10;</xsl:text>
+        <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
+        <xsl:text>  {&#10;</xsl:text>
+        <!-- <xsl:text>    if ( fast_signal_pipes_fd1[i] == -1) continue; // this pipe is already closed&#10;</xsl:text> -->
+        <xsl:text>    i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignalTypes check_if_proxy_closed;&#10;</xsl:text>
+        <xsl:text>    // if the proxy is still active, this read should result in -EAGAIN and should not block;&#10;</xsl:text>
+        <xsl:text>    //if ( read(fast_signal_pipes_fd0[i], &amp;check_if_proxy_closed, sizeof(check_if_proxy_closed)) != -1 &amp;&amp; check_if_proxy_closed == fastsig_null)&#10;</xsl:text>
+        <xsl:text>    //{&#10;</xsl:text>
+        <xsl:text>    //  need_cleanup = true;&#10;</xsl:text>
+        <xsl:text>    //  close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
+        <xsl:text>    //  close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
+        <xsl:text>    //}&#10;</xsl:text>
+        <xsl:text>    write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>  // now close for all proxies that disappeared the corresponding pipe file descriptors;&#10;</xsl:text>
+        <xsl:text>  //if (need_cleanup)&#10;</xsl:text>
+        <xsl:text>  //{&#10;</xsl:text>
+        <xsl:text>  //  std::vector&lt;gint&gt; new_fast_signal_pipes_fd0;&#10;</xsl:text>
+        <xsl:text>  //  std::vector&lt;gint&gt; new_fast_signal_pipes_fd1;&#10;</xsl:text>
+        <xsl:text>  //  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
+        <xsl:text>  //  {&#10;</xsl:text>
+        <xsl:text>  //    if (fast_signal_pipes_fd1[i] != -1) &#10;</xsl:text>
+        <xsl:text>  //    {&#10;</xsl:text> 
+        <xsl:text>  //      // copy only the active pipes;&#10;</xsl:text>
+        <xsl:text>  //      new_fast_signal_pipes_fd0.push_back(fast_signal_pipes_fd0[i]);&#10;</xsl:text>
+        <xsl:text>  //      new_fast_signal_pipes_fd1.push_back(fast_signal_pipes_fd1[i]);&#10;</xsl:text>
+        <xsl:text>  //    }&#10;</xsl:text>
+        <xsl:text>  //  }&#10;</xsl:text> 
+        <xsl:text>  //  // use the updated pipe list from now on;&#10;</xsl:text>
+        <xsl:text>  //  fast_signal_pipes_fd0 = new_fast_signal_pipes_fd0;&#10;</xsl:text>
+        <xsl:text>  //  fast_signal_pipes_fd1 = new_fast_signal_pipes_fd1;&#10;</xsl:text>
+        <xsl:text>  //}&#10;</xsl:text>
+        <xsl:text>}&#10;&#10;</xsl:text>
       </xsl:for-each>
 
       <!-- Constructor -->
