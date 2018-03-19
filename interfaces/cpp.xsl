@@ -212,6 +212,7 @@
 
       <!-- C++ boilerplate -->
       <xsl:text>// This is a generated file. Do not modify.&#10;&#10;</xsl:text>
+      <xsl:text>#include &lt;time.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;iostream&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;glibmm.h&gt;&#10;</xsl:text>
@@ -352,6 +353,7 @@
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text>_FastSignalData data;&#10;</xsl:text>
+      <xsl:text>  struct timespec start_time;&#10;</xsl:text>
       <xsl:text>};&#10;&#10;</xsl:text>
 
 
@@ -787,7 +789,10 @@
       <xsl:value-of select="$iface"/>
       <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
       <xsl:text>  read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
-      <xsl:text>  //std::cerr &lt;&lt; "signal recieved: " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>  struct timespec stop_time;&#10;</xsl:text>
+      <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;stop_time);&#10;</xsl:text> 
+      <xsl:text>  double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
+      <xsl:text>  std::cerr &lt;&lt; "signal recieved, dt=" &lt;&lt; dt &lt;&lt; " us : " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>  switch(signal_msg.type) {&#10;</xsl:text>
       <xsl:for-each select="signal">
         <xsl:text>    case fastsig_</xsl:text>
@@ -1273,8 +1278,10 @@
         <xsl:text>  signal_msg.data.</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text> = signal_data;&#10;</xsl:text>
-        <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;  {&#10;  </xsl:text>
-        <xsl:text>  write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+        <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
+        <xsl:text>  {&#10;</xsl:text>
+        <xsl:text>    clock_gettime( CLOCK_REALTIME, &amp;signal_msg.start_time);&#10;</xsl:text>
+        <xsl:text>    write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
         <xsl:text>  }&#10;}&#10;&#10;</xsl:text>
       </xsl:for-each>
 
