@@ -100,31 +100,29 @@
     <xsl:text>&#10;{&#10;}&#10;&#10;</xsl:text>
 
     <!-- Proxy Destructor -->
-    <!-- <xsl:if test="not(count(signal)=0)">            -->
-      <xsl:value-of select="$name"/>
-      <xsl:text>_Proxy::~</xsl:text>
-      <xsl:value-of select="$name"/>
-      <xsl:text>_Proxy()&#10;{&#10;</xsl:text>
-      <xsl:for-each select="interface">
-        <xsl:variable name="iface"><xsl:apply-templates mode="iface-name" select="."/></xsl:variable>
-        <xsl:for-each select="property[@access='read' or @access='readwrite']">
-          <xsl:if test="not(annotation[@name = 'org.freedesktop.DBus.Property.EmitsChangedSignal' and @value != 'true'])">
-            <xsl:text>  con_prop</xsl:text>
-            <xsl:value-of select="@name"/>
-            <xsl:text>.disconnect();&#10;</xsl:text>
-          </xsl:if>
-        </xsl:for-each>
-      </xsl:for-each>
-      <xsl:for-each select="interface">
-        <xsl:variable name="iface"><xsl:apply-templates mode="iface-name" select="."/></xsl:variable>
-        <xsl:for-each select="signal">
-          <xsl:text>  con_sig</xsl:text>
+    <xsl:value-of select="$name"/>
+    <xsl:text>_Proxy::~</xsl:text>
+    <xsl:value-of select="$name"/>
+    <xsl:text>_Proxy()&#10;{&#10;</xsl:text>
+    <xsl:for-each select="interface">
+      <xsl:variable name="iface"><xsl:apply-templates mode="iface-name" select="."/></xsl:variable>
+      <xsl:for-each select="property[@access='read' or @access='readwrite']">
+        <xsl:if test="not(annotation[@name = 'org.freedesktop.DBus.Property.EmitsChangedSignal' and @value != 'true'])">
+          <xsl:text>  con_prop</xsl:text>
           <xsl:value-of select="@name"/>
           <xsl:text>.disconnect();&#10;</xsl:text>
-        </xsl:for-each>
+        </xsl:if>
       </xsl:for-each>
-      <xsl:text>}&#10;&#10;</xsl:text>
-    <!-- </xsl:if>   -->
+    </xsl:for-each>
+    <xsl:for-each select="interface">
+      <xsl:variable name="iface"><xsl:apply-templates mode="iface-name" select="."/></xsl:variable>
+      <xsl:for-each select="signal">
+        <xsl:text>  con_sig</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>.disconnect();&#10;</xsl:text>
+      </xsl:for-each>
+    </xsl:for-each>
+    <xsl:text>}&#10;&#10;</xsl:text>
 
     <!-- Register all interfaces -->
     <xsl:text>void </xsl:text>
@@ -801,7 +799,7 @@
       <xsl:text>  struct timespec stop_time;&#10;</xsl:text>
       <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;stop_time);&#10;</xsl:text> 
       <xsl:text>  double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
-      <xsl:text>  std::cerr &lt;&lt; "</xsl:text>
+      <xsl:text>  //std::cerr &lt;&lt; "</xsl:text>
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text> signal recieved, dt=" &lt;&lt; dt &lt;&lt; " us    " &lt;&lt; signal_msg.fd_list_length &lt;&lt; "  :  " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
