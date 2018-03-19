@@ -366,8 +366,10 @@
       Gio::DBus::ProxyFlags flags);&#10;&#10;<xsl:text/>
 
       <!-- destructor closes the pipe that is used for fast signal reception -->
-      <xsl:text>     ~i</xsl:text>
-      <xsl:value-of select="$iface"/>_Proxy();&#10;&#10;<xsl:text/>
+      <xsl:if test="not(count(signal)=0)">           
+        <xsl:text>     ~i</xsl:text>
+        <xsl:value-of select="$iface"/>_Proxy();&#10;&#10;<xsl:text/>
+      </xsl:if>
 
       <!-- Concrete implementations -->
       <xsl:text>    // Implement abstract base class methods&#10;</xsl:text>
