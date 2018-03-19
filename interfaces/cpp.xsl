@@ -213,6 +213,7 @@
       <!-- C++ boilerplate -->
       <xsl:text>// This is a generated file. Do not modify.&#10;&#10;</xsl:text>
       <xsl:text>#include &lt;time.h&gt;&#10;</xsl:text>
+      <xsl:text>#include &lt;fcntl.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;iostream&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;glibmm.h&gt;&#10;</xsl:text>
@@ -955,8 +956,11 @@
       <xsl:text>        throw Gio::DBus::Error(Gio::DBus::Error::INVALID_ARGS, "Wrong number of file descriptors received");&#10;</xsl:text>
       <xsl:text>      }&#10;</xsl:text>
       <xsl:text>      int fd_index = 0;&#10;</xsl:text>
-      <xsl:text>      int fd0 = g_unix_fd_list_get(fd_list, fd_index++, 0);&#10;</xsl:text>
-      <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0);&#10;</xsl:text>
+      <xsl:text>      int fd0 = g_unix_fd_list_get(fd_list, fd_index++, 0); // reading end&#10;</xsl:text>
+      <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0); // writing end&#10;</xsl:text> 
+      <xsl:text>      //make the file descriptors non-blocking;&#10;</xsl:text>
+      <xsl:text>      int fd0_flags = fcntl(fd0, F_GETFL, 0);&#10;</xsl:text>
+      <xsl:text>      fcntl(fd0, F_SETFL, fd0_flags | O_NONBLOCK);&#10;</xsl:text>
       <xsl:text>      fast_signal_pipes_fd0.push_back(fd0);&#10;</xsl:text>
       <xsl:text>      fast_signal_pipes_fd1.push_back(fd1);&#10;</xsl:text>
       <xsl:text>    } catch (...) {&#10;</xsl:text>
@@ -1272,17 +1276,48 @@
         <xsl:text>  i</xsl:text>
         <xsl:value-of select="$iface"/>
         <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
+        <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;signal_msg.start_time);&#10;</xsl:text>
         <xsl:text>  signal_msg.type = fastsig_</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text>;&#10;</xsl:text>
         <xsl:text>  signal_msg.data.</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text> = signal_data;&#10;</xsl:text>
+        <xsl:text>  bool need_cleanup = false;&#10;</xsl:text>
         <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
         <xsl:text>  {&#10;</xsl:text>
-        <xsl:text>    clock_gettime( CLOCK_REALTIME, &amp;signal_msg.start_time);&#10;</xsl:text>
+        <!-- <xsl:text>    if ( fast_signal_pipes_fd1[i] == -1) continue; // this pipe is already closed&#10;</xsl:text> -->
+        <xsl:text>    i</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text>_FastSignalTypes check_if_proxy_closed;&#10;</xsl:text>
+        <xsl:text>    // if the proxy is still active, this read should result in -EAGAIN and should not block;&#10;</xsl:text>
+        <xsl:text>    if ( read(fast_signal_pipes_fd0[i], &amp;check_if_proxy_closed, sizeof(check_if_proxy_closed)) != -1 &amp;&amp; check_if_proxy_closed == fastsig_null)&#10;</xsl:text>
+        <xsl:text>    {&#10;</xsl:text>
+        <xsl:text>      need_cleanup = true;&#10;</xsl:text>
+        <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
+        <xsl:text>      close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
+        <xsl:text>    }&#10;</xsl:text>
         <xsl:text>    write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
-        <xsl:text>  }&#10;}&#10;&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>  // now close for all proxies that disappeared the corresponding pipe file descriptors;&#10;</xsl:text>
+        <xsl:text>  if (need_cleanup)&#10;</xsl:text>
+        <xsl:text>  {&#10;</xsl:text>
+        <xsl:text>    std::vector&lt;gint&gt; new_fast_signal_pipes_fd0;&#10;</xsl:text>
+        <xsl:text>    std::vector&lt;gint&gt; new_fast_signal_pipes_fd1;&#10;</xsl:text>
+        <xsl:text>    for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
+        <xsl:text>    {&#10;</xsl:text>
+        <xsl:text>      if (fast_signal_pipes_fd1[i] != -1) &#10;</xsl:text>
+        <xsl:text>      {&#10;</xsl:text> 
+        <xsl:text>        // copy only the active pipes;&#10;</xsl:text>
+        <xsl:text>        new_fast_signal_pipes_fd0.push_back(fast_signal_pipes_fd0[i]);&#10;</xsl:text>
+        <xsl:text>        new_fast_signal_pipes_fd1.push_back(fast_signal_pipes_fd1[i]);&#10;</xsl:text>
+        <xsl:text>      }&#10;</xsl:text>
+        <xsl:text>    }&#10;</xsl:text> 
+        <xsl:text>    // use the updated pipe list from now on;&#10;</xsl:text>
+        <xsl:text>    fast_signal_pipes_fd0 = new_fast_signal_pipes_fd0;&#10;</xsl:text>
+        <xsl:text>    fast_signal_pipes_fd1 = new_fast_signal_pipes_fd1;&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>}&#10;&#10;</xsl:text>
       </xsl:for-each>
 
       <!-- Constructor -->
