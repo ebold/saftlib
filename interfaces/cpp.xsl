@@ -295,6 +295,7 @@
       <xsl:text>"&lt;/node&gt;";&#10;&#10;</xsl:text> 
 
       <!-- enum  for the fast signal types -->
+      <xsl:text>#define FAST_SIGNAL_STRING_LENGTH 32&#10;</xsl:text>
       <xsl:text>// types for handling of fast signals&#10;</xsl:text>
       <xsl:text>enum </xsl:text>
       <xsl:text>i</xsl:text>
@@ -323,7 +324,7 @@
           </xsl:if>
           <xsl:text> </xsl:text>
           <xsl:value-of select="@name"/>
-          <xsl:if test="@type='s'">[8]</xsl:if> 
+          <xsl:if test="@type='s'">[FAST_SIGNAL_STRING_LENGTH]</xsl:if> 
           <xsl:text>;&#10;</xsl:text>
         </xsl:for-each>
         <xsl:text>};&#10;</xsl:text>
@@ -747,7 +748,7 @@
       <xsl:if test="not(count(signal)=0)">           
         <!-- create a dbus function call to send a pipe to the service.
            this pipe will be used for transmission of fast signals -->
-        <xsl:text>  std::cerr &lt;&lt; "constructor of </xsl:text>
+        <xsl:text>  //std::cerr &lt;&lt; "constructor of </xsl:text>
         <xsl:value-of select="@name"/> 
         <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
 
@@ -765,7 +766,7 @@
         <xsl:text>  const Glib::VariantContainerBase&amp; query = Glib::VariantContainerBase::create_tuple(query_vector);&#10;&#10;</xsl:text>
         <xsl:text>  Glib::VariantContainerBase response;&#10;</xsl:text>
         <!-- make dbus function call -->
-        <xsl:text>  std::cerr &lt;&lt; "dbus function call in constructor of </xsl:text>
+        <xsl:text>  //std::cerr &lt;&lt; "dbus function call in constructor of </xsl:text>
         <xsl:value-of select="@name"/> 
         <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>  response = connection-&gt;call_sync(&#10;</xsl:text>
@@ -782,7 +783,7 @@
         <xsl:text>  );&#10;&#10;</xsl:text>  
         <xsl:text>  fastsig_connection = Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
         <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP);&#10;&#10;<xsl:text/>
-        <xsl:text>  std::cerr &lt;&lt; "end of constructor of </xsl:text>
+        <xsl:text>  //std::cerr &lt;&lt; "end of constructor of </xsl:text>
         <xsl:value-of select="@name"/> 
         <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
       </xsl:if>
@@ -798,32 +799,36 @@
       <xsl:text>  read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
       <xsl:text>  struct timespec stop_time;&#10;</xsl:text>
       <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;stop_time);&#10;</xsl:text> 
-      <xsl:text>  double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
+      <xsl:text>  //double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
       <xsl:text>  //std::cerr &lt;&lt; "</xsl:text>
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text> signal recieved, dt=" &lt;&lt; dt &lt;&lt; " us    " &lt;&lt; signal_msg.fd_list_length &lt;&lt; "  :  " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>  switch(signal_msg.type) {&#10;</xsl:text>
+      <xsl:text>    case fastsig_null:&#10;</xsl:text>
+      <xsl:text>    break;&#10;</xsl:text>
       <xsl:for-each select="signal">
         <xsl:text>    case fastsig_</xsl:text>
         <xsl:value-of select="@name"/>
         <xsl:text>: {&#10;</xsl:text>
-        <xsl:text>      i</xsl:text>
-        <xsl:value-of select="$iface"/>
-        <xsl:text>_FastSignal_</xsl:text>
-        <xsl:value-of select="@name"/>
-        <xsl:text> signal_data = signal_msg.data.</xsl:text>
-        <xsl:value-of select="@name"/>
-        <xsl:text>;&#10;</xsl:text>
-<!--         some debug output -->
-        <xsl:text>      //std::cerr &lt;&lt; "signal </xsl:text>
-        <xsl:value-of select="@name"/>
-        <xsl:text> recieved: "</xsl:text>
-        <xsl:for-each select="arg">
-          <xsl:text> &lt;&lt; " " &lt;&lt; signal_data.</xsl:text>
+        <xsl:if test="not(count(arg)=0)">
+          <xsl:text>      i</xsl:text>
+          <xsl:value-of select="$iface"/>
+          <xsl:text>_FastSignal_</xsl:text>
           <xsl:value-of select="@name"/>
-        </xsl:for-each>
-        <xsl:text> &lt;&lt; std::endl;&#10;</xsl:text>
+          <xsl:text> signal_data = signal_msg.data.</xsl:text>
+          <xsl:value-of select="@name"/>
+          <xsl:text>;&#10;</xsl:text>
+  <!--         some debug output -->
+          <xsl:text>      //std::cerr &lt;&lt; "signal </xsl:text>
+          <xsl:value-of select="@name"/>
+          <xsl:text> recieved: "</xsl:text>
+          <xsl:for-each select="arg">
+            <xsl:text> &lt;&lt; " " &lt;&lt; signal_data.</xsl:text>
+            <xsl:value-of select="@name"/>
+          </xsl:for-each>
+          <xsl:text> &lt;&lt; std::endl;&#10;</xsl:text>
+        </xsl:if>
         <!-- trigger the sigc signal -->
         <xsl:text>      </xsl:text>
         <xsl:value-of select="@name"/>
@@ -857,11 +862,11 @@
         <xsl:value-of select="$iface"/>
         <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
         <xsl:text>  signal_msg.type = fastsig_null; // closing signal&#10;</xsl:text>
-        <xsl:text>  std::cerr &lt;&lt; "Destructor called, writing fastsig_null" &lt;&lt; std::endl;</xsl:text>
+        <xsl:text>  //std::cerr &lt;&lt; "Destructor called, writing fastsig_null" &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>  write(fast_signal_pipe_fd[1], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
         <xsl:text>  close(fast_signal_pipe_fd[0]);&#10;</xsl:text>
         <xsl:text>  close(fast_signal_pipe_fd[1]);&#10;</xsl:text>
-        <xsl:text>  std::cerr &lt;&lt; "end of destructor of </xsl:text>
+        <xsl:text>  //std::cerr &lt;&lt; "end of destructor of </xsl:text>
         <xsl:value-of select="@name"/> 
         <xsl:text>  " &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>}&#10;&#10;</xsl:text>
@@ -1246,15 +1251,18 @@
             <xsl:value-of select="@name"/>
             <xsl:text>.copy(signal_data.</xsl:text>
             <xsl:value-of select="@name"/>
-            <xsl:text>, 8)</xsl:text>
+            <xsl:text>, FAST_SIGNAL_STRING_LENGTH);&#10;</xsl:text>
+            <xsl:text>  signal_data.</xsl:text>
+            <xsl:value-of select="@name"/>
+            <xsl:text>[FAST_SIGNAL_STRING_LENGTH-1] = 0; // make sure we have null terminated strings&#10;</xsl:text>
           </xsl:if>
           <xsl:if test="@type!='s'">
             <xsl:text>  signal_data.</xsl:text>
             <xsl:value-of select="@name"/>
             <xsl:text> = </xsl:text>
             <xsl:value-of select="@name"/>
+            <xsl:text>;&#10;</xsl:text>
           </xsl:if>        
-          <xsl:text>;&#10;</xsl:text>
         </xsl:for-each>
         <xsl:text>  i</xsl:text>
         <xsl:value-of select="$iface"/>
@@ -1274,33 +1282,33 @@
         <xsl:text>    i</xsl:text>
         <xsl:value-of select="$iface"/>
         <xsl:text>_FastSignalTypes check_if_proxy_closed;&#10;</xsl:text>
-        <xsl:text>    // if the proxy is still active, this read should result in -EAGAIN and should not block;&#10;</xsl:text>
-        <xsl:text>    //if ( read(fast_signal_pipes_fd0[i], &amp;check_if_proxy_closed, sizeof(check_if_proxy_closed)) != -1 &amp;&amp; check_if_proxy_closed == fastsig_null)&#10;</xsl:text>
-        <xsl:text>    //{&#10;</xsl:text>
-        <xsl:text>    //  need_cleanup = true;&#10;</xsl:text>
-        <xsl:text>    //  close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
-        <xsl:text>    //  close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
-        <xsl:text>    //}&#10;</xsl:text>
+        <xsl:text>    // if the proxy is still active, this read should result in -1 and should not block;&#10;</xsl:text>
+        <xsl:text>    if ( read(fast_signal_pipes_fd0[i], &amp;check_if_proxy_closed, sizeof(check_if_proxy_closed)) != -1 &amp;&amp; check_if_proxy_closed == fastsig_null)&#10;</xsl:text>
+        <xsl:text>    {&#10;</xsl:text>
+        <xsl:text>      need_cleanup = true;&#10;</xsl:text>
+        <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
+        <xsl:text>      close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
+        <xsl:text>    }&#10;</xsl:text>
         <xsl:text>    write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text>
         <xsl:text>  // now close for all proxies that disappeared the corresponding pipe file descriptors;&#10;</xsl:text>
-        <xsl:text>  //if (need_cleanup)&#10;</xsl:text>
-        <xsl:text>  //{&#10;</xsl:text>
-        <xsl:text>  //  std::vector&lt;gint&gt; new_fast_signal_pipes_fd0;&#10;</xsl:text>
-        <xsl:text>  //  std::vector&lt;gint&gt; new_fast_signal_pipes_fd1;&#10;</xsl:text>
-        <xsl:text>  //  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
-        <xsl:text>  //  {&#10;</xsl:text>
-        <xsl:text>  //    if (fast_signal_pipes_fd1[i] != -1) &#10;</xsl:text>
-        <xsl:text>  //    {&#10;</xsl:text> 
-        <xsl:text>  //      // copy only the active pipes;&#10;</xsl:text>
-        <xsl:text>  //      new_fast_signal_pipes_fd0.push_back(fast_signal_pipes_fd0[i]);&#10;</xsl:text>
-        <xsl:text>  //      new_fast_signal_pipes_fd1.push_back(fast_signal_pipes_fd1[i]);&#10;</xsl:text>
-        <xsl:text>  //    }&#10;</xsl:text>
-        <xsl:text>  //  }&#10;</xsl:text> 
-        <xsl:text>  //  // use the updated pipe list from now on;&#10;</xsl:text>
-        <xsl:text>  //  fast_signal_pipes_fd0 = new_fast_signal_pipes_fd0;&#10;</xsl:text>
-        <xsl:text>  //  fast_signal_pipes_fd1 = new_fast_signal_pipes_fd1;&#10;</xsl:text>
-        <xsl:text>  //}&#10;</xsl:text>
+        <xsl:text>  if (need_cleanup)&#10;</xsl:text>
+        <xsl:text>  {&#10;</xsl:text>
+        <xsl:text>    std::vector&lt;gint&gt; new_fast_signal_pipes_fd0;&#10;</xsl:text>
+        <xsl:text>    std::vector&lt;gint&gt; new_fast_signal_pipes_fd1;&#10;</xsl:text>
+        <xsl:text>    for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
+        <xsl:text>    {&#10;</xsl:text>
+        <xsl:text>      if (fast_signal_pipes_fd1[i] != -1) &#10;</xsl:text>
+        <xsl:text>      {&#10;</xsl:text> 
+        <xsl:text>        // copy only the active pipes;&#10;</xsl:text>
+        <xsl:text>        new_fast_signal_pipes_fd0.push_back(fast_signal_pipes_fd0[i]);&#10;</xsl:text>
+        <xsl:text>        new_fast_signal_pipes_fd1.push_back(fast_signal_pipes_fd1[i]);&#10;</xsl:text>
+        <xsl:text>      }&#10;</xsl:text>
+        <xsl:text>    }&#10;</xsl:text> 
+        <xsl:text>    // use the updated pipe list from now on;&#10;</xsl:text>
+        <xsl:text>    fast_signal_pipes_fd0 = new_fast_signal_pipes_fd0;&#10;</xsl:text>
+        <xsl:text>    fast_signal_pipes_fd1 = new_fast_signal_pipes_fd1;&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
         <xsl:text>}&#10;&#10;</xsl:text>
       </xsl:for-each>
 
