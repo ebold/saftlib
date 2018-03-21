@@ -215,6 +215,8 @@
       <xsl:text>#include &lt;time.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;fcntl.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;iostream&gt;&#10;</xsl:text>
+      <xsl:text>#include &lt;fstream&gt;&#10;</xsl:text>
+      <xsl:text>#include &lt;iomanip&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;glibmm.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;gio/gunixfdlist.h&gt;&#10;</xsl:text>
@@ -860,11 +862,12 @@
         <xsl:text>  fastsig_connection.disconnect();&#10;</xsl:text>
         <xsl:text>  i</xsl:text>
         <xsl:value-of select="$iface"/>
-        <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
-        <xsl:text>  signal_msg.type = fastsig_null; // closing signal&#10;</xsl:text>
-        <xsl:text>  //std::cerr &lt;&lt; "Destructor called, writing fastsig_null" &lt;&lt; std::endl;&#10;</xsl:text>
-        <xsl:text>  write(fast_signal_pipe_fd[1], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+        <xsl:text>_FastSignalTypes proxy_closed = fastsig_null; // closing signal&#10;</xsl:text>
+        <xsl:text>  std::cerr &lt;&lt; "Destructor called, writing fastsig_null" &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  int result = write(fast_signal_pipe_fd[1], &amp;proxy_closed, sizeof(proxy_closed));&#10;</xsl:text>
+        <xsl:text>  std::cerr &lt;&lt; "result = " &lt;&lt; result &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>  close(fast_signal_pipe_fd[0]);&#10;</xsl:text>
+        <xsl:text>  usleep(100000);&#10;</xsl:text>
         <xsl:text>  close(fast_signal_pipe_fd[1]);&#10;</xsl:text>
         <xsl:text>  //std::cerr &lt;&lt; "end of destructor of </xsl:text>
         <xsl:value-of select="@name"/> 
@@ -1239,6 +1242,14 @@
         <xsl:text>", "", &#10;</xsl:text>
         <xsl:text>      Glib::VariantContainerBase::create_tuple(data_vector));&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text> -->
+        <xsl:text>  std::ofstream log("/var/log/saftd.log", std::ios::app);&#10;</xsl:text>
+        <xsl:text>  log &lt;&lt; "</xsl:text>
+        <xsl:value-of select="$iface"/>
+        <xsl:text> on fast signal </xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text>  "&lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  log &lt;&lt; "  fd0.size() = " &lt;&lt; fast_signal_pipes_fd0.size() &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  log &lt;&lt; "  fd1.size() = " &lt;&lt; fast_signal_pipes_fd1.size() &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>  // send a fast signals&#10;</xsl:text>
         <xsl:text>  i</xsl:text>
         <xsl:value-of select="$iface"/>
@@ -1285,6 +1296,7 @@
         <xsl:text>    // if the proxy is still active, this read should result in -1 and should not block;&#10;</xsl:text>
         <xsl:text>    if ( read(fast_signal_pipes_fd0[i], &amp;check_if_proxy_closed, sizeof(check_if_proxy_closed)) != -1 &amp;&amp; check_if_proxy_closed == fastsig_null)&#10;</xsl:text>
         <xsl:text>    {&#10;</xsl:text>
+        <xsl:text>      log &lt;&lt; "  cleanup case (Proxy is gone) **************************" &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>      need_cleanup = true;&#10;</xsl:text>
         <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
         <xsl:text>      close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
@@ -1376,6 +1388,18 @@
         <xsl:value-of select="@name"/>
         <xsl:text>.disconnect();&#10;</xsl:text>
       </xsl:for-each>
+
+      <!-- close all fast signal pipes -->
+      <xsl:if test="not(count(signal)=0)">
+        <xsl:text>  std::ofstream log("/var/log/saftd.log", std::ios::app);&#10;</xsl:text>
+        <xsl:text>  log &lt;&lt; "  cleanup case (Service destructor) close all pipes **************************" &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
+        <xsl:text>  {&#10;</xsl:text>
+        <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
+        <xsl:text>      close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
+        <xsl:text>  }&#10;</xsl:text>
+      </xsl:if>
+
       <xsl:text>}&#10;&#10;</xsl:text>
 
       <!-- Property reporting boilerplate -->
