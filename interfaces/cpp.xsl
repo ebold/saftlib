@@ -214,7 +214,9 @@
       <xsl:text>// This is a generated file. Do not modify.&#10;&#10;</xsl:text>
       <xsl:text>#include &lt;time.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;fcntl.h&gt;&#10;</xsl:text>
+      <xsl:text>#include "../drivers/eca_flags.h"&#10;</xsl:text>
       <xsl:text>#include &lt;iostream&gt;&#10;</xsl:text>
+      <xsl:text>#include &lt;etherbone.h&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;fstream&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;iomanip&gt;&#10;</xsl:text>
       <xsl:text>#include &lt;giomm.h&gt;&#10;</xsl:text>
@@ -802,6 +804,11 @@
       <xsl:text>  struct timespec stop_time;&#10;</xsl:text>
       <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;stop_time);&#10;</xsl:text> 
       <xsl:text>  //double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
+      <!-- <xsl:text>  etherbone::Cycle cycle;&#10;</xsl:text>
+      <xsl:text>  eb_device_t device; eb_status_t eb_status; eb_socket_t socket;&#10;</xsl:text>
+      <xsl:text>  eb_socket_open(EB_ABI_CODE, 0, EB_ADDR32|EB_DATA32, &amp;socket);&#10;</xsl:text>
+      <xsl:text>  eb_device_open(socket, "dev/wbm0", EB_ADDR32|EB_DATA32, 3, &amp;device));&#10;</xsl:text>
+      <xsl:text>  eb_device_read(device, addr_first+WR_MIL_GW_SHARED_OFFSET, EB_BIG_ENDIAN|EB_DATA32, (eb_data_t*)&amp;magic_number, 0, eb_block);&#10;</xsl:text> -->
       <xsl:text>  //std::cerr &lt;&lt; "</xsl:text>
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
@@ -977,9 +984,6 @@
         <xsl:text>      int fd_index = 0;&#10;</xsl:text>
         <xsl:text>      int fd0 = g_unix_fd_list_get(fd_list, fd_index++, 0); // reading end&#10;</xsl:text>
         <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0); // writing end&#10;</xsl:text> 
-        <xsl:text>      //make the file descriptors non-blocking;&#10;</xsl:text>
-        <xsl:text>      int fd0_flags = fcntl(fd0, F_GETFL, 0);&#10;</xsl:text>
-        <xsl:text>      fcntl(fd0, F_SETFL, fd0_flags | O_NONBLOCK);&#10;</xsl:text>
         <xsl:text>      fast_signal_pipes_fd0.push_back(fd0);&#10;</xsl:text>
         <xsl:text>      fast_signal_pipes_fd1.push_back(fd1);&#10;</xsl:text>
         <xsl:text>    } catch (...) {&#10;</xsl:text>
@@ -1293,6 +1297,10 @@
         <xsl:text>    i</xsl:text>
         <xsl:value-of select="$iface"/>
         <xsl:text>_FastSignalTypes check_if_proxy_closed;&#10;</xsl:text>
+        <xsl:text>    //make the reading file descriptor non-blocking;&#10;</xsl:text>
+        <xsl:text>    int fd0_flags = fcntl(fast_signal_pipes_fd0[i], F_GETFL, 0);&#10;</xsl:text>
+        <xsl:text>    fcntl(fast_signal_pipes_fd0[i], F_SETFL, fd0_flags | O_NONBLOCK);&#10;</xsl:text>
+
         <xsl:text>    // if the proxy is still active, this read should result in -1 and should not block;&#10;</xsl:text>
         <xsl:text>    if ( read(fast_signal_pipes_fd0[i], &amp;check_if_proxy_closed, sizeof(check_if_proxy_closed)) != -1 &amp;&amp; check_if_proxy_closed == fastsig_null)&#10;</xsl:text>
         <xsl:text>    {&#10;</xsl:text>
@@ -1301,6 +1309,9 @@
         <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
         <xsl:text>      close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
         <xsl:text>    }&#10;</xsl:text>
+        <xsl:text>    //make the reading file descriptor blocking again;&#10;</xsl:text>
+        <xsl:text>    fcntl(fast_signal_pipes_fd0[i], F_SETFL, fd0_flags &amp; ~O_NONBLOCK);&#10;</xsl:text>
+
         <xsl:text>    write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text>
         <xsl:text>  // now close for all proxies that disappeared the corresponding pipe file descriptors;&#10;</xsl:text>
