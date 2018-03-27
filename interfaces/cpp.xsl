@@ -364,6 +364,7 @@
       <xsl:text>_FastSignalData data;&#10;</xsl:text>
       <xsl:text>  struct timespec start_time;&#10;</xsl:text>
       <xsl:text>  int fd_list_length;&#10;</xsl:text>
+      <xsl:text>  int seq_id;&#10;</xsl:text>
       <xsl:text>};&#10;&#10;</xsl:text>
 
 
@@ -789,7 +790,7 @@
         <xsl:text>      "de.gsi.saftlib"&#10;</xsl:text>
         <xsl:text>  );&#10;&#10;</xsl:text>  
         <xsl:text>  fastsig_connection = Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
-        <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP);&#10;&#10;<xsl:text/>
+        <xsl:value-of select="$iface"/>_Proxy::dispatchFastSignals), fast_signal_pipe_fd[0], Glib::IO_IN &#124; Glib::IO_HUP, Glib::PRIORITY_HIGH );&#10;&#10;<xsl:text/>
         <xsl:text>  close(close_signal_pipe_fd[0]); // no need for the reading part of this pipe&#10;</xsl:text>
         <xsl:text>  close(fast_signal_pipe_fd[1]); // no need for the writing part of this pipe&#10;</xsl:text>
         <xsl:text>  //std::cerr &lt;&lt; "end of constructor of </xsl:text>
@@ -805,14 +806,23 @@
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
-      <xsl:text>  read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+      <xsl:text>  int result = read(fast_signal_pipe_fd[0], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+      <xsl:text>  if (result == 0) {&#10;// EOF </xsl:text>
+      <xsl:text>    fastsig_connection.disconnect();&#10;</xsl:text>
+      <xsl:text>    return false;&#10;</xsl:text>
+      <xsl:text>  }&#10;</xsl:text>
+      <xsl:text>  if (result != sizeof(signal_msg)) {&#10;</xsl:text>
+      <xsl:text>    std::cerr &lt;&lt; "read: " &lt;&lt; result  &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text>    throw std::runtime_error("wrong read return value");&#10;</xsl:text>
+      <xsl:text>    return false;&#10;</xsl:text>
+      <xsl:text>  }&#10;</xsl:text>
       <xsl:text>  struct timespec stop_time;&#10;</xsl:text>
       <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;stop_time);&#10;</xsl:text> 
-      <xsl:text>  //double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
-      <xsl:text>  //std::cerr &lt;&lt; "</xsl:text>
+      <xsl:text>  double dt = ( stop_time.tv_sec - signal_msg.start_time.tv_sec )*1000000. + ( stop_time.tv_nsec - signal_msg.start_time.tv_nsec )/1000.;&#10;</xsl:text>
+      <xsl:text>  std::cerr &lt;&lt; "</xsl:text>
       <xsl:text>  i</xsl:text>
       <xsl:value-of select="$iface"/>
-      <xsl:text> signal recieved, dt=" &lt;&lt; dt &lt;&lt; " us    " &lt;&lt; signal_msg.fd_list_length &lt;&lt; "  :  " &lt;&lt; (int)signal_msg.type &lt;&lt; std::endl;&#10;</xsl:text>
+      <xsl:text> signal recieved, dt=" &lt;&lt; dt &lt;&lt; " us    " &lt;&lt; signal_msg.fd_list_length &lt;&lt; "  :  " &lt;&lt; (int)signal_msg.type &lt;&lt; "  id = " &lt;&lt; signal_msg.seq_id &lt;&lt; std::endl;&#10;</xsl:text>
       <xsl:text>  switch(signal_msg.type) {&#10;</xsl:text>
       <xsl:text>    case fastsig_null:&#10;</xsl:text>
       <xsl:text>    break;&#10;</xsl:text>
@@ -962,13 +972,16 @@
         <xsl:text>  std::ofstream log("/var/log/saftd.log", std::ios::app);&#10;</xsl:text>
         <xsl:text>  log &lt;&lt; " </xsl:text>
         <xsl:value-of select="$iface"/>
-        <xsl:text> cleanup case (Service destructor) close all pipes **************************" &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text> cleanup case (Service close callback) close all pipes **************************" &lt;&lt; std::endl;&#10;</xsl:text>
         <xsl:text>  for (unsigned i = 0; i &lt; fast_signal_pipes_fd1.size(); ++i) &#10;</xsl:text>
         <xsl:text>  {&#10;</xsl:text>
         <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
         <xsl:text>      close(close_signal_pipes_fd0[i]); close_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text>
-      </xsl:if>
+        <xsl:text>  fast_signal_pipes_fd1.clear();&#10;</xsl:text>
+        <xsl:text>  close_signal_pipes_fd0.clear();&#10;</xsl:text>
+        <xsl:text>  fastsig_close.disconnect();&#10;</xsl:text>
+      </xsl:if>   
       <xsl:text>  return true;&#10;</xsl:text>
       <xsl:text>}&#10;&#10;</xsl:text>
 
@@ -1009,7 +1022,7 @@
         <xsl:text>      int fd1 = g_unix_fd_list_get(fd_list, fd_index++, 0); // writing end&#10;</xsl:text> 
         <xsl:text>      close_signal_pipes_fd0.push_back(fd0);&#10;</xsl:text>
         <xsl:text>      fastsig_close = Glib::signal_io().connect(sigc::mem_fun(this, &amp;i</xsl:text>
-        <xsl:value-of select="$iface"/>_Service::closeFastSignals), close_signal_pipes_fd0.back(), Glib::IO_IN &#124; Glib::IO_HUP);&#10;<xsl:text/>
+        <xsl:value-of select="$iface"/>_Service::closeFastSignals), close_signal_pipes_fd0.back(), Glib::IO_IN &#124; Glib::IO_HUP, Glib::PRIORITY_HIGH );&#10;<xsl:text/>
         <xsl:text>      fast_signal_pipes_fd1.push_back(fd1);&#10;</xsl:text>
         <xsl:text>    } catch (...) {&#10;</xsl:text>
         <xsl:text>        connection.reset();&#10;</xsl:text>
@@ -1304,6 +1317,7 @@
         <xsl:value-of select="$iface"/>
         <xsl:text>_FastSignal signal_msg;&#10;</xsl:text>
         <xsl:text>  signal_msg.fd_list_length = fast_signal_pipes_fd1.size();&#10;</xsl:text>
+        <xsl:text>  signal_msg.seq_id = signal_seq_id++;&#10;</xsl:text>
         <xsl:text>  clock_gettime( CLOCK_REALTIME, &amp;signal_msg.start_time);&#10;</xsl:text>
         <xsl:text>  signal_msg.type = fastsig_</xsl:text>
         <xsl:value-of select="@name"/>
@@ -1333,7 +1347,11 @@
         <xsl:text>      //close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
         <xsl:text>      //close(fast_signal_pipes_fd0[i]); fast_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
         <xsl:text>    //}&#10;</xsl:text>
-        <xsl:text>    write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+        <xsl:text>    int result = write(fast_signal_pipes_fd1[i], &amp;signal_msg, sizeof(signal_msg));&#10;</xsl:text>
+        <xsl:text>    if (result != sizeof(signal_msg)) {&#10;</xsl:text>
+        <xsl:text>      std::ofstream log("/var/log/saftd.log", std::ios::app);&#10;</xsl:text>
+        <xsl:text>      log &lt;&lt; "write: " &lt;&lt; result  &lt;&lt; std::endl;&#10;</xsl:text>
+        <xsl:text>    }&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text>
         <xsl:text>  // now close for all proxies that disappeared the corresponding pipe file descriptors;&#10;</xsl:text>
         <xsl:text>  //if (need_cleanup)&#10;</xsl:text>
@@ -1399,7 +1417,7 @@
       <xsl:text>    sigc::mem_fun(this, &amp;i</xsl:text>
       <xsl:value-of select="$iface"/>
       <xsl:text>_Service::on_set_property))&#10;</xsl:text>
-      <xsl:text>{&#10;}&#10;&#10;</xsl:text>
+      <xsl:text>{&#10;  signal_seq_id = 0;}&#10;&#10;</xsl:text>
 
       <!-- Deconstructor -->
       <xsl:text>i</xsl:text>
@@ -1432,6 +1450,9 @@
         <xsl:text>      close(fast_signal_pipes_fd1[i]); fast_signal_pipes_fd1[i] = -1;&#10;</xsl:text>
         <xsl:text>      close(close_signal_pipes_fd0[i]); close_signal_pipes_fd0[i] = -1;&#10;</xsl:text>
         <xsl:text>  }&#10;</xsl:text>
+        <xsl:text>  fast_signal_pipes_fd1.clear();&#10;</xsl:text>
+        <xsl:text>  close_signal_pipes_fd0.clear();&#10;</xsl:text>
+        <xsl:text>  log &lt;&lt; fast_signal_pipes_fd1.size() &lt;&lt; " " &lt;&lt; close_signal_pipes_fd0.size();&#10;</xsl:text>
       </xsl:if>
 
       <xsl:text>}&#10;&#10;</xsl:text>

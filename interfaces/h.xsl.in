@@ -474,6 +474,7 @@ class i<xsl:value-of select="$iface"/>_Service {
     std::vector&lt;gint&gt; fast_signal_pipes_fd1;  // writing end
     sigc::connection fastsig_close;&#10;
     <xsl:text>     bool closeFastSignals(Glib::IOCondition condition);&#10;&#10;</xsl:text>
+    int signal_seq_id;
   private:
     i<xsl:value-of select="$iface"/> *impl;
     sigc::slot&lt;void, const char*&gt; rethrow;<xsl:text/>
