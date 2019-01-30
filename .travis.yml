@@ -52,7 +52,7 @@ before_script:
 - ./fix-git.sh
 - sed -i 's/spec_wb.o//g' ip_cores/fpga-config-space/pcie-wb/Makefile
 - cd ip_cores/saftlib
-- if [ $TRAVIS_PULL_REQUEST -ne 0 ]; then git checkout $TRAVIS_PULL_REQUEST_BRANCH; else git checkout $TRAVIS_BRANCH; fi
+- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then git checkout $TRAVIS_PULL_REQUEST_BRANCH; else git checkout $TRAVIS_BRANCH; fi
 - cd ../..
 - make etherbone
 - make tools
