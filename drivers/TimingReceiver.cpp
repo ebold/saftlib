@@ -231,7 +231,7 @@ TimingReceiver::~TimingReceiver()
     clog << kLogErr << "TimingReceiver::~TimingReceiver: unknown exception" << std::endl;
   }
   // wrong function call
-  get_GatewareInfo();
+  getGatewareInfo();
 }
 
 void TimingReceiver::setHandler(unsigned channel, bool enable, eb_address_t address)
