@@ -9,6 +9,7 @@ compiler:
 branches:
   only:
   - master
+  - temp_sense
   - travisci
 
 env:
@@ -34,25 +35,31 @@ before_install:
 - sudo apt-get install libglib2.0
 - sudo apt-get install xsltproc
 
-# hack Makefile to fix make failure regarding spec_wb.o
+# clone bel_projects and check out the master branch
 # update submodules
+# hack Makefile to fix make failure regarding spec_wb.o
+# check out the current branch of saftlib
+# make and install etherbone etc
 before_script:
 - echo $TRAVIS_BRANCH
 - echo $TRAVIS_PULL_REQUEST_BRANCH
 - echo $TRAVIS_REPO_SLUG
 - echo $TRAVIS_PULL_REQUEST_SLUG
+- echo $TRAVIS_PULL_REQUEST
 - git clone --recursive https://github.com/ebold/bel_projects.git
 - cd bel_projects
 - git checkout master
 - ./fix-git.sh
 - sed -i 's/spec_wb.o//g' ip_cores/fpga-config-space/pcie-wb/Makefile
-- cd ip_cores/saftlib && git checkout $TRAVIS_BRANCH
+- cd ip_cores/saftlib
+- if [ $TRAVIS_PULL_REQUEST -ne 0 ]; then git checkout $TRAVIS_PULL_REQUEST_BRANCH; else git checkout $TRAVIS_BRANCH; fi
 - cd ../..
-
-#script:
 - make etherbone
 - make tools
 - make driver
 - sudo make install
+
+# make and install saftlib
+script:
 - make saftlib
 - sudo make saftlib-install
