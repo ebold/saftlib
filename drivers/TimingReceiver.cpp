@@ -204,6 +204,7 @@ TimingReceiver::TimingReceiver(const ConstructorType& args)
   }
 
   getGatewareVersion();
+  getLocked();
 }
 
 TimingReceiver::~TimingReceiver()
