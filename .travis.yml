@@ -21,6 +21,8 @@ compiler:
 
 # update 
 before_install:
+- nproc
+- lscpu
 - sudo apt-get update
 
 # install required packages
@@ -42,18 +44,15 @@ before_install:
 # - build bel_projects first (master branch) and
 # - build saftlib project (override Travis checkout)
 before_script:
-- echo $TRAVIS_BRANCH
-- echo $TRAVIS_PULL_REQUEST
-- echo $TRAVIS_PULL_REQUEST_BRANCH
-- echo $TRAVIS_REPO_SLUG
-- echo $TRAVIS_PULL_REQUEST_SLUG
 - git clone --recursive https://github.com/ebold/bel_projects.git
 - cd bel_projects
 - git checkout master
 - ./fix-git.sh
 - sed -i 's/spec_wb.o//g' ip_cores/fpga-config-space/pcie-wb/Makefile
 - cd ip_cores/saftlib
-- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then git fetch origin +refs/pull/$TRAVIS_PULL_REQUEST/merge:m_$TRAVIS_PULL_REQUEST && git checkout -fq m_$TRAVIS_PULL_REQUEST; else git checkout $TRAVIS_BRANCH && git pull; fi
+- "if [ \"$TRAVIS_PULL_REQUEST\" != \"false\" ];
+  then git fetch origin +refs/pull/$TRAVIS_PULL_REQUEST/merge:m_$TRAVIS_PULL_REQUEST &&
+  git checkout -fq m_$TRAVIS_PULL_REQUEST; else git checkout $TRAVIS_BRANCH && git pull; fi"
 - git log -n 5 --oneline 
 - cd ../..
 - make etherbone
@@ -63,7 +62,7 @@ before_script:
 
 # make and install saftlib
 script:
-- make saftlib -j4
+- make saftlib -j$(nproc)
 
 after_success:
 - sudo make saftlib-install
