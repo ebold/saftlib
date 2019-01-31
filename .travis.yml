@@ -1,4 +1,4 @@
-# Copyright (C) 2019 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+# Copyright (C) 2019 GSI Helmholtz Centre for Heavy Ion Research GmbH
 #
 # Build instructions for the saftlib project using Travis CI
 #
@@ -52,11 +52,11 @@ before_script:
 - cd ip_cores/saftlib
 - "if [ \"$TRAVIS_PULL_REQUEST\" != \"false\" ]; then
     git fetch origin +refs/pull/$TRAVIS_PULL_REQUEST/merge:m_$TRAVIS_PULL_REQUEST &&
-    git checkout -fq m_$TRAVIS_PULL_REQUEST; 
-  else 
-    git checkout $TRAVIS_BRANCH && git pull; 
+    git checkout -fq m_$TRAVIS_PULL_REQUEST;
+  else
+    git checkout $TRAVIS_BRANCH && git pull;
   fi"
-- git log -n 5 --oneline 
+- git log -n 5 --oneline
 - cd ../..
 - make etherbone
 - make tools
