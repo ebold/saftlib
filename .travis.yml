@@ -1,6 +1,6 @@
-# 2019 GSI Helmholtzzentrum für Schwerionenforschung GmbH
+# Copyright (C) 2019 GSI Helmholtz Centre for Heavy Ion Research GmbH 
 #
-# Travis CI
+# Build descriptions for Travis CI
 #
 # Author Enkhbold Ochirsuren <E.Ochirsuren@gsi.de>
 
@@ -43,10 +43,10 @@ before_install:
 # - build saftlib project (override Travis checkout)
 before_script:
 - echo $TRAVIS_BRANCH
+- echo $TRAVIS_PULL_REQUEST
 - echo $TRAVIS_PULL_REQUEST_BRANCH
 - echo $TRAVIS_REPO_SLUG
 - echo $TRAVIS_PULL_REQUEST_SLUG
-- echo $TRAVIS_PULL_REQUEST
 - git clone --recursive https://github.com/ebold/bel_projects.git
 - cd bel_projects
 - git checkout master
