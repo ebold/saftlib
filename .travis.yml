@@ -21,6 +21,8 @@ compiler:
 
 # update 
 before_install:
+- nproc
+- lscpu
 - sudo apt-get update
 
 # install required packages
@@ -47,8 +49,6 @@ before_script:
 - echo $TRAVIS_PULL_REQUEST_BRANCH
 - echo $TRAVIS_REPO_SLUG
 - echo $TRAVIS_PULL_REQUEST_SLUG
-- nproc
-- lscpu
 - git clone --recursive https://github.com/ebold/bel_projects.git
 - cd bel_projects
 - git checkout master
@@ -65,7 +65,7 @@ before_script:
 
 # make and install saftlib
 script:
-- make saftlib -j4
+- make saftlib -j$(nproc)
 
 after_success:
 - sudo make saftlib-install
