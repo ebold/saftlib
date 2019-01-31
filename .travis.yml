@@ -44,11 +44,6 @@ before_install:
 # - build bel_projects first (master branch) and
 # - build saftlib project (override Travis checkout)
 before_script:
-- echo $TRAVIS_BRANCH
-- echo $TRAVIS_PULL_REQUEST
-- echo $TRAVIS_PULL_REQUEST_BRANCH
-- echo $TRAVIS_REPO_SLUG
-- echo $TRAVIS_PULL_REQUEST_SLUG
 - git clone --recursive https://github.com/ebold/bel_projects.git
 - cd bel_projects
 - git checkout master
