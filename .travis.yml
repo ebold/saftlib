@@ -47,6 +47,8 @@ before_script:
 - echo $TRAVIS_PULL_REQUEST_BRANCH
 - echo $TRAVIS_REPO_SLUG
 - echo $TRAVIS_PULL_REQUEST_SLUG
+- nproc
+- lscpu
 - git clone --recursive https://github.com/ebold/bel_projects.git
 - cd bel_projects
 - git checkout master
