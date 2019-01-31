@@ -63,7 +63,7 @@ before_script:
 
 # make and install saftlib
 script:
-- make saftlib
+- make saftlib -j4
 
 after_success:
 - sudo make saftlib-install
