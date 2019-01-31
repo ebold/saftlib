@@ -203,7 +203,7 @@ TimingReceiver::TimingReceiver(const ConstructorType& args)
     resetMostFull(i);
   }
 
-  get_GatewareVersion();
+  getGatewareVersion();
 }
 
 TimingReceiver::~TimingReceiver()
