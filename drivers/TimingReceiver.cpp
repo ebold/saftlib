@@ -202,6 +202,8 @@ TimingReceiver::TimingReceiver(const ConstructorType& args)
     // Wipe out old global state for the channel => will generate an MSI => updateMostFull
     resetMostFull(i);
   }
+
+  get_GatewareVersion();
 }
 
 TimingReceiver::~TimingReceiver()
