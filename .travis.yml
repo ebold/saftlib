@@ -53,7 +53,7 @@ before_script:
 - ./fix-git.sh
 - sed -i 's/spec_wb.o//g' ip_cores/fpga-config-space/pcie-wb/Makefile
 - cd ip_cores/saftlib
-- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then git fetch +refs/pull/$TRAVIS_PULL_REQUEST/merge:m_$TRAVIS_PULL_REQUEST && git checkout -fq m_$TRAVIS_PULL_REQUEST; else git checkout $TRAVIS_BRANCH && git pull; fi
+- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then git fetch origin +refs/pull/$TRAVIS_PULL_REQUEST/merge:m_$TRAVIS_PULL_REQUEST && git checkout -fq m_$TRAVIS_PULL_REQUEST; else git checkout $TRAVIS_BRANCH && git pull; fi
 - git log -n 5 --oneline 
 - cd ../..
 - make etherbone
@@ -63,7 +63,7 @@ before_script:
 
 # make and install saftlib
 script:
-- make saftlib
+- make saftlib -j4
 
 after_success:
 - sudo make saftlib-install
