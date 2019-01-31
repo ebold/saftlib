@@ -1,5 +1,7 @@
 Saftlib - Simplified API for Timing
 
+[![Build Status](https://travis-ci.com/ebold/saftlib.svg?branch=travisci)](https://travis-ci.com/ebold/saftlib)
+
 GSI timing receivers include a large collection of slave devices. Saftlib
 provides a user-friendly software interface for controlling these slaves.
 The process saftd shares access to these hardware resources on behalf of
